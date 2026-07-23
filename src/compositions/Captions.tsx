@@ -34,7 +34,7 @@ export const Captions = () => {
       fps={FPS}
       width={1080}
       height={1920}
-      defaultProps={{ captions: [], audioSrc: null }}
+      defaultProps={{ captions: [], videoSrc: null, audioSrc: null }}
       calculateMetadata={calculateMetadata}
     />
   );

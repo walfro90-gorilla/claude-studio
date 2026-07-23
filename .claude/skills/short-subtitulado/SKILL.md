@@ -45,13 +45,18 @@ npm run render -- Captions out/short.mp4
 
 For a quick sanity pass first: `npm run render -- Captions out/test.mp4 --frames=0-29`.
 
-## Audio in the video
+## Footage and audio
 
-The composition accepts an `audioSrc` prop, `null` by default, so **the render is silent unless it is set**. Put the audio file in `public/` and pass the filename:
+Both props are `null` by default, so **the render is silent on black unless they are set**. Put the files in `public/` and pass the filenames:
 
 ```
-npm run render -- Captions out/short.mp4 --props='{"audioSrc":"voz.mp3"}'
+npm run render -- Captions out/short.mp4 --props='{"videoSrc":"clip.mp4","audioSrc":"voz.mp3"}'
 ```
+
+- `videoSrc` — footage behind the captions, auto-cropped to 9:16 around its centre. Must be at least as long as the captions; its own audio plays.
+- `audioSrc` — separate audio, for footage with no usable sound. Drop it when the video already carries the voice.
+
+A video-backed render is much slower than one on black (minutes, not seconds). Tune the pacing on stills first, render the video once at the end.
 
 ## Notes
 

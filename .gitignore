@@ -8,3 +8,6 @@ out
 
 # Per-machine Claude Code permissions; the shared skills in .claude/skills are tracked.
 .claude/settings.local.json
+
+# Generated test footage, too big to track. CLAUDE.md has the command to rebuild it.
+public/sample-bg.mp4

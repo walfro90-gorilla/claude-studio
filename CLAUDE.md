@@ -88,7 +88,31 @@ The one non-obvious detail, and the reason the mapping isn't a plain field renam
 
 `public/sample.mp3` is a 20-second English news clip kept as a fixture, and `public/captions.json` holds its real transcript, so the composition renders out of the box. `npm run transcribe` overwrites the JSON — copy it aside first if it still matters.
 
-The composition renders **silent by default** — `audioSrc` is `null`. Put the audio in `public/` and pass it at render time: `npm run render -- Captions out/short.mp4 --props='{"audioSrc":"voz.mp3"}'`.
+## Footage behind the captions
+
+`CaptionedVideo` takes two optional sources, both filenames inside `public/`:
+
+- `videoSrc` — footage rendered through `<OffthreadVideo>` with `objectFit: cover`, which crops horizontal material to 9:16 around its centre rather than letterboxing it. The clip must be at least as long as the captions. Its own audio track plays.
+- `audioSrc` — a separate audio file, for footage with no usable audio (or no footage at all).
+
+Both default to `null`, so **the composition renders silent on black** unless they are passed:
+
+```
+npm run render -- Captions out/short.mp4 --props='{"videoSrc":"clip.mp4","audioSrc":"voz.mp3"}'
+```
+
+Two layout facts that are easy to get wrong and invisible until a frame is rendered — both cost a render to find:
+
+- The captions live in their own `<AbsoluteFill>`. The video layer is positioned, so a statically-positioned caption element is painted *underneath* it and disappears entirely.
+- `AbsoluteFill` is `flex-direction: column`. Without `flex-row` every word stacks on its own line.
+
+Expect video-backed renders to be far slower — 20 seconds of 1080p footage took ~3m50s versus ~18s for the same captions on black, since `OffthreadVideo` extracts each frame with ffmpeg. Synthetic high-noise test footage is the worst case; real footage decodes faster.
+
+To regenerate the throwaway background fixture (gitignored, needs system ffmpeg — Remotion's bundled build has most filters compiled out):
+
+```
+ffmpeg -f lavfi -i "testsrc2=size=1920x1080:rate=30:duration=22" -c:v libx264 -pix_fmt yuv420p -y public/sample-bg.mp4
+```
 
 ## Where the agent lives
 
