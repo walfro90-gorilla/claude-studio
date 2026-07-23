@@ -8,6 +8,7 @@
   "dependencies": {
     "@remotion/captions": "^4.0.498",
     "@remotion/cli": "4.0.498",
+    "@remotion/google-fonts": "^4.0.498",
     "@remotion/tailwind-v4": "4.0.498",
     "assemblyai": "^4.36.4",
     "react": "19.2.3",

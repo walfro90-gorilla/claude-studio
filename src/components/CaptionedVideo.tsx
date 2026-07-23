@@ -7,6 +7,15 @@ import {
   useVideoConfig,
 } from "remotion";
 import { createTikTokStyleCaptions, type Caption } from "@remotion/captions";
+import { loadFont } from "@remotion/google-fonts/Montserrat";
+
+// Pinned so the render does not depend on whatever font the rendering machine
+// happens to have. Remotion blocks the render until the font is ready, so the
+// first frame never draws in a fallback face.
+const { fontFamily } = loadFont("normal", {
+  weights: ["900"],
+  subsets: ["latin"],
+});
 
 // Acts as a minimum page duration: a page only breaks on a word once the page
 // already spans this long. Lower = shorter pages, faster cuts.
@@ -52,6 +61,7 @@ export const CaptionedVideo: React.FC<CaptionedVideoProps> = ({
                   : "text-white"
               }
               style={{
+                fontFamily,
                 fontSize: 96,
                 fontWeight: 900,
                 textTransform: "uppercase",

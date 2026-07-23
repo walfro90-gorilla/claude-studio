@@ -44,6 +44,8 @@ out/                    # renders, gitignored
 .claude/skills/         # repeatable workflows Claude Code runs on request
 ```
 
+Tracked vs ignored: `.claude/skills/` is committed (shared workflows) while `.claude/settings.local.json` is not (per-machine permissions). `public/` fixtures are committed; `out/`, `node_modules/`, and `.env` are not.
+
 Two boundaries carry the design:
 
 **`src` vs `scripts`** — `src` runs inside headless Chrome under Remotion's bundler; `scripts` runs in plain Node with filesystem and network access. Transcription, file IO, and API calls belong in `scripts` and hand results to `src` through `public/`. Do not import across that line.
@@ -62,6 +64,8 @@ Entry chain — adding a video means touching the last two:
 `<Composition>` is a *declaration*, not a render: it registers an id plus dimensions/duration with Remotion. The CLI and Studio look compositions up by that id, so `id` is the public handle — renaming it breaks render commands and any CI referencing it. Register more videos by adding a file under `compositions/` and rendering it in `Root.tsx`.
 
 `calculateMetadata` runs before render and can override duration, dimensions, and props dynamically. `Captions.tsx` uses it to `fetch(staticFile('captions.json'))` and set `durationInFrames` from the last caption's `endMs` — so a new transcript resizes the video with no code change. The `durationInFrames={1}` on the element is a placeholder that `calculateMetadata` always replaces.
+
+The caption font is pinned: `CaptionedVideo.tsx` calls `loadFont` from `@remotion/google-fonts/Montserrat` at module scope and passes the returned `fontFamily` into the style. Without this the render inherits whatever font the rendering machine happens to have — DejaVu on this Linux box, something else on Lambda. Remotion blocks the render until the face is ready, so the first frames never draw in a fallback. Swap fonts by changing that one import and weight; both must exist in the Google Fonts catalog.
 
 Inside a component, `useCurrentFrame()` drives all animation. Remotion renders each frame as a fresh, deterministic snapshot — the same frame number must always produce the same pixels, so no `Date.now()`, no `Math.random()`, no un-seeded state, and no animation driven by wall-clock time or CSS transitions.
 
