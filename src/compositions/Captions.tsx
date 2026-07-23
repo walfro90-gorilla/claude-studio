@@ -1,5 +1,6 @@
 import { CalculateMetadataFunction, Composition, staticFile } from "remotion";
 import type { Caption } from "@remotion/captions";
+import { trimSilence } from "../lib/silence";
 import {
   CaptionedVideo,
   type CaptionedVideoProps,
@@ -7,21 +8,35 @@ import {
 
 const FPS = 30;
 const CAPTIONS_FILE = "captions.json";
-// Frames held after the last word so the video does not cut on the final syllable.
-const TAIL_FRAMES = 15;
 
-// Loads the captions written by scripts/transcribe.mts and sizes the video to
-// them, so a new transcript changes the duration without touching this file.
+// Silence longer than this is cut out of the render. Set to null to keep the
+// media whole. Raise it for deliberate, slow delivery; lower it for a tighter,
+// more relentless cut.
+const TRIM_SILENCE_OVER_MS: number | null = 700;
+// Breathing room kept around every cut so consonants are not clipped.
+const PAD_MS = 150;
+
+// Loads the captions written by the transcribe step, drops the dead air, and
+// sizes the video to what is left — so a new transcript changes the cut and
+// the duration without touching this file.
 const calculateMetadata: CalculateMetadataFunction<
   CaptionedVideoProps
 > = async ({ props }) => {
   const res = await fetch(staticFile(CAPTIONS_FILE));
-  const captions = (await res.json()) as Caption[];
-  const lastMs = captions.length === 0 ? 0 : captions[captions.length - 1].endMs;
+  const trimmed = trimSilence({
+    captions: (await res.json()) as Caption[],
+    fps: FPS,
+    maxGapMs: TRIM_SILENCE_OVER_MS,
+    padMs: PAD_MS,
+  });
 
   return {
-    props: { ...props, captions },
-    durationInFrames: Math.ceil((lastMs / 1000) * FPS) + TAIL_FRAMES,
+    props: {
+      ...props,
+      captions: trimmed.captions,
+      segments: trimmed.segments,
+    },
+    durationInFrames: Math.max(1, trimmed.durationInFrames),
   };
 };
 
@@ -34,7 +49,12 @@ export const Captions = () => {
       fps={FPS}
       width={1080}
       height={1920}
-      defaultProps={{ captions: [], videoSrc: null, audioSrc: null }}
+      defaultProps={{
+        captions: [],
+        segments: [],
+        videoSrc: null,
+        audioSrc: null,
+      }}
       calculateMetadata={calculateMetadata}
     />
   );

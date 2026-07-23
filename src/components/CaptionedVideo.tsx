@@ -3,12 +3,14 @@ import {
   AbsoluteFill,
   Audio,
   OffthreadVideo,
+  Series,
   staticFile,
   useCurrentFrame,
   useVideoConfig,
 } from "remotion";
 import { createTikTokStyleCaptions, type Caption } from "@remotion/captions";
 import { loadFont } from "@remotion/google-fonts/Montserrat";
+import type { Segment } from "../lib/silence";
 
 // Pinned so the render does not depend on whatever font the rendering machine
 // happens to have. Remotion blocks the render until the font is ready, so the
@@ -23,7 +25,10 @@ const { fontFamily } = loadFont("normal", {
 export const COMBINE_TOKENS_WITHIN_MS = 800;
 
 export type CaptionedVideoProps = {
+  /** Already shifted onto the trimmed timeline by calculateMetadata. */
   captions: Caption[];
+  /** The stretches of media that survived the silence cut, in play order. */
+  segments: Segment[];
   /** Filename inside public/. Its own audio track plays; must cover the whole video. */
   videoSrc: string | null;
   /** Filename inside public/. Use when the footage has no usable audio of its own. */
@@ -32,6 +37,7 @@ export type CaptionedVideoProps = {
 
 export const CaptionedVideo: React.FC<CaptionedVideoProps> = ({
   captions,
+  segments,
   videoSrc,
   audioSrc,
 }) => {
@@ -54,17 +60,35 @@ export const CaptionedVideo: React.FC<CaptionedVideoProps> = ({
 
   return (
     <AbsoluteFill className="bg-black">
-      {videoSrc === null ? null : (
-        <AbsoluteFill>
-          <OffthreadVideo
-            src={staticFile(videoSrc)}
-            // Crops horizontal footage to 9:16 around its centre instead of
-            // letterboxing it. Reframe in the editor if the subject is off-centre.
-            style={{ width: "100%", height: "100%", objectFit: "cover" }}
-          />
-        </AbsoluteFill>
-      )}
-      {audioSrc === null ? null : <Audio src={staticFile(audioSrc)} />}
+      {/* One sequence per surviving stretch, played back to back. trimBefore
+          and trimAfter point into the SOURCE media; the silence between them
+          never reaches the output. */}
+      <Series>
+        {segments.map((segment, i) => (
+          <Series.Sequence
+            key={`${segment.trimBefore}-${i}`}
+            durationInFrames={segment.durationInFrames}
+          >
+            {videoSrc === null ? null : (
+              <OffthreadVideo
+                src={staticFile(videoSrc)}
+                trimBefore={segment.trimBefore}
+                trimAfter={segment.trimAfter}
+                // Crops horizontal footage to 9:16 around its centre instead of
+                // letterboxing it. Reframe in the editor if the subject is off-centre.
+                style={{ width: "100%", height: "100%", objectFit: "cover" }}
+              />
+            )}
+            {audioSrc === null ? null : (
+              <Audio
+                src={staticFile(audioSrc)}
+                trimBefore={segment.trimBefore}
+                trimAfter={segment.trimAfter}
+              />
+            )}
+          </Series.Sequence>
+        ))}
+      </Series>
       {/* Its own layer: the video above is positioned, so a static caption
           element would be painted underneath it and vanish. flex-row because
           AbsoluteFill defaults to a column, which stacks every word on its

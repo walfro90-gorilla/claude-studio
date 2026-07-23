@@ -29,6 +29,7 @@
     "build": "remotion bundle",
     "upgrade": "remotion upgrade",
     "lint": "eslint src scripts && tsc",
+    "check": "node --disable-warning=MODULE_TYPELESS_PACKAGE_JSON scripts/short.mts --check && node scripts/transcribe.mts --check",
     "short": "node --env-file-if-exists=.env scripts/short.mts",
     "transcribe": "node --env-file-if-exists=.env scripts/transcribe.mts",
     "render": "remotion render",

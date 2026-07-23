@@ -15,7 +15,9 @@ When the caption settings are already right for this kind of material:
 npm run short -- <audio-or-video> [out.mp4]
 ```
 
-One command: copies the file into `public/`, transcribes it, renders. A video input goes behind the captions and keeps its own audio; anything else plays over black.
+One command: copies the file into `public/`, transcribes it, cuts the silences, renders. A video input goes behind the captions and keeps its own audio; anything else plays over black.
+
+The output is shorter than the input by design — pauses over 700ms are dropped. Tell the user how much came off; if they wanted the pauses, point them at `TRIM_SILENCE_OVER_MS` below rather than re-recording.
 
 Use the four steps below instead when the material is new, the pacing needs tuning, or the render must be checked before committing minutes to it.
 
@@ -43,7 +45,10 @@ npm run compositions
 
 ## 3. Tune the pacing, then look at a frame
 
-`COMBINE_TOKENS_WITHIN_MS` in `src/components/CaptionedVideo.tsx` is a **minimum page duration**, not a silence threshold. Lower = shorter pages, faster cuts. 800 suits fast speech; 1200-1500 suits calm narration.
+Two knobs, in two different files, doing two different jobs:
+
+- `COMBINE_TOKENS_WITHIN_MS` in `src/components/CaptionedVideo.tsx` is a **minimum page duration** — how long a caption page lasts before it can break. 800 suits fast speech; 1200-1500 suits calm narration.
+- `TRIM_SILENCE_OVER_MS` in `src/compositions/Captions.tsx` is the **longest pause kept in the cut**. 700 is tight; raise it for deliberate delivery, set it to `null` to keep the media whole. `npm run compositions` shows the resulting length, which is the fastest way to see how much was cut.
 
 Render one frame mid-sentence and actually look at it:
 

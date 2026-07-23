@@ -11,6 +11,7 @@ Remotion 4.0.498 project (React + TypeScript video rendering), scaffolded from t
 ```
 npm run dev            # remotion studio — live preview at localhost:3000, the main dev loop
 npm run lint           # eslint src scripts && tsc — lint + typecheck in one
+npm run check          # self-checks for the caption mapping and the silence cut
 npm run compositions   # list registered composition IDs
 npm run short          # media file in, subtitled short out — the whole pipeline
 npm run transcribe     # audio -> public/captions.json (loads .env automatically)
@@ -26,7 +27,9 @@ npm run render -- Captions out/test.mp4 --frames=0-29   # fast smoke test, ~10s
 npm run still  -- Captions out/frame.png --frame=110
 ```
 
-No test framework is installed, by design. Two checks cover the project: `node scripts/transcribe.mts --check` for the caption mapping, and a short `--frames=0-29` render for the video path — the cheapest proof that bundle, headless Chrome, and encoder all still work. Run the render check after touching composition code, `remotion.config.ts`, or webpack config.
+No test framework is installed, by design. `npm run check` covers the pure logic — the caption mapping and the silence cut — and a short `--frames=0-29` render covers the video path, the cheapest proof that bundle, headless Chrome, and encoder all still work. Run the render check after touching composition code, `remotion.config.ts`, or webpack config.
+
+Layout and timing bugs survive both. When a composition changes, render one still where content should be visible and look at it; `ffmpeg -i frame.png -vf scale=1:1 -f rawvideo -pix_fmt rgb24 - | xxd -p` prints the average pixel, which is enough to tell "something is drawn" from "black".
 
 ## Layout
 
@@ -101,6 +104,20 @@ The one non-obvious detail, and the reason the mapping isn't a plain field renam
 `COMBINE_TOKENS_WITHIN_MS` in `CaptionedVideo.tsx` behaves as a *minimum page duration*, not a gap threshold — a page only breaks once it already spans that long. Lower it for faster cuts. It ignores silence, so a long pause mid-page does not force a break.
 
 `public/sample.mp3` is a 20-second English news clip kept as a fixture, and `public/captions.json` holds its real transcript, so the composition renders out of the box. `npm run transcribe` overwrites the JSON — copy it aside first if it still matters.
+
+## Cutting the silence
+
+`src/lib/silence.ts` turns the word timestamps into the stretches worth keeping and drops the dead air between them. Nothing analyses the audio — AssemblyAI already says where the words are, so the gaps between them *are* the silence.
+
+Two constants in `Captions.tsx` drive it. `TRIM_SILENCE_OVER_MS` (700) is the longest pause kept; set it to `null` to leave the media whole. `PAD_MS` (150) is the breathing room kept on each side of a cut so consonants are not clipped, and it never eats more than half a gap, so neighbouring segments cannot pad into each other and replay the same moment twice.
+
+`calculateMetadata` runs the trim, so `durationInFrames` is the *cut* length and the captions handed to the component are already shifted onto the shortened timeline. The component then renders one `<Series.Sequence>` per surviving stretch, each holding the media with `trimBefore`/`trimAfter` pointing into the source.
+
+The one subtlety worth preserving: captions are shifted by the accumulated **frame** offset, not the millisecond one. Each segment rounds to whole frames independently, so shifting in milliseconds drifts the captions a little further out of sync with every cut.
+
+Measured on 14.08s of speech with a 4s silence spliced into the middle: output 10.39s, and `silencedetect` finds no pause over 1s where the input had one of 4.07s.
+
+`npm run check` covers this: gap detection, frame counts, the shifted timing, empty input, and `maxGapMs: null` leaving the media untouched.
 
 ## Footage behind the captions
 
