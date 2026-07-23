@@ -12,6 +12,7 @@ Remotion 4.0.498 project (React + TypeScript video rendering), scaffolded from t
 npm run dev            # remotion studio — live preview at localhost:3000, the main dev loop
 npm run lint           # eslint src scripts && tsc — lint + typecheck in one
 npm run compositions   # list registered composition IDs
+npm run short          # media file in, subtitled short out — the whole pipeline
 npm run transcribe     # audio -> public/captions.json (loads .env automatically)
 npm run build          # remotion bundle — builds the bundle only, does NOT render a video
 npm run upgrade        # remotion upgrade — bumps all Remotion packages together
@@ -70,6 +71,19 @@ The caption font is pinned: `CaptionedVideo.tsx` calls `loadFont` from `@remotio
 Inside a component, `useCurrentFrame()` drives all animation. Remotion renders each frame as a fresh, deterministic snapshot — the same frame number must always produce the same pixels, so no `Date.now()`, no `Math.random()`, no un-seeded state, and no animation driven by wall-clock time or CSS transitions.
 
 `public/` is served at the root and is the only correct place for assets loaded at runtime; reference them with `staticFile('name.png')`, not a relative path.
+
+## The one-command path
+
+```
+npm run short -- <audio-or-video> [out.mp4]     # default output: out/short.mp4
+node scripts/short.mts --check                  # routing self-check, no API call, no render
+```
+
+`scripts/short.mts` copies the input into `public/` if it is not already there (compositions can only read from `public/`), transcribes it, writes `public/captions.json`, and shells out to `remotion render` with the right props. Routing lives in `scripts/lib/short.mts`: a video extension becomes `videoSrc` and brings its own audio, anything else becomes `audioSrc` over black.
+
+It renders by spawning the Remotion CLI rather than calling `@remotion/renderer` directly — deliberately. The Node API ignores `remotion.config.ts`, so the Tailwind webpack override would have to be re-passed by hand and silently breaks styling if forgotten.
+
+Reach for the individual commands below when tuning; `short` is for when the settings are already right.
 
 ## Captions (AssemblyAI → Remotion)
 

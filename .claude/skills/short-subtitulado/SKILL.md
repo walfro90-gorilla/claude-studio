@@ -5,7 +5,23 @@ description: Turn an audio or video file into a rendered vertical short with bur
 
 # Short subtitulado
 
-Audio in, rendered `.mp4` out. Four steps; do not skip step 3.
+Audio or video in, rendered `.mp4` out.
+
+## The fast path
+
+When the caption settings are already right for this kind of material:
+
+```
+npm run short -- <audio-or-video> [out.mp4]
+```
+
+One command: copies the file into `public/`, transcribes it, renders. A video input goes behind the captions and keeps its own audio; anything else plays over black.
+
+Use the four steps below instead when the material is new, the pacing needs tuning, or the render must be checked before committing minutes to it.
+
+## The tuning path
+
+Four steps; do not skip step 3.
 
 ## 1. Transcribe
 
