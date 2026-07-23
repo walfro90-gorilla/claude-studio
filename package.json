@@ -1,16 +1,18 @@
 {
-  "name": "_rtmp",
+  "name": "claude-studio",
   "version": "1.0.0",
-  "description": "My Remotion video",
+  "description": "Console-driven video studio: Remotion compositions + AssemblyAI transcription",
   "repository": {},
   "license": "UNLICENSED",
   "private": true,
   "dependencies": {
+    "@remotion/captions": "^4.0.498",
     "@remotion/cli": "4.0.498",
+    "@remotion/tailwind-v4": "4.0.498",
+    "assemblyai": "^4.36.4",
     "react": "19.2.3",
     "react-dom": "19.2.3",
     "remotion": "4.0.498",
-    "@remotion/tailwind-v4": "4.0.498",
     "tailwindcss": "4.0.0"
   },
   "devDependencies": {
@@ -25,7 +27,11 @@
     "dev": "remotion studio",
     "build": "remotion bundle",
     "upgrade": "remotion upgrade",
-    "lint": "eslint src && tsc"
+    "lint": "eslint src scripts && tsc",
+    "transcribe": "node --env-file-if-exists=.env scripts/transcribe.mts",
+    "render": "remotion render",
+    "still": "remotion still",
+    "compositions": "remotion compositions"
   },
   "sideEffects": [
     "*.css"

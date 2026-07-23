@@ -5,6 +5,9 @@
     "jsx": "react-jsx",
     "strict": true,
     "noEmit": true,
+    // scripts/ run straight through Node's type stripping, which resolves the
+    // real file — so their imports keep the .mts extension.
+    "allowImportingTsExtensions": true,
     "lib": ["es2015"],
     "esModuleInterop": true,
     "skipLibCheck": true,
