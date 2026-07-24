@@ -67,7 +67,7 @@ Entry chain — adding a video means touching the last two:
 
 `<Composition>` is a *declaration*, not a render: it registers an id plus dimensions/duration with Remotion. The CLI and Studio look compositions up by that id, so `id` is the public handle — renaming it breaks render commands and any CI referencing it. Register more videos by adding a file under `compositions/` and rendering it in `Root.tsx`.
 
-`calculateMetadata` runs before render and can override duration, dimensions, and props dynamically. `Captions.tsx` uses it to `fetch(staticFile('captions.json'))` and set `durationInFrames` from the last caption's `endMs` — so a new transcript resizes the video with no code change. The `durationInFrames={1}` on the element is a placeholder that `calculateMetadata` always replaces.
+`calculateMetadata` runs before render and can override duration, dimensions, and props dynamically. `Captions.tsx` uses it to `fetch(staticFile('captions.json'))`, run the cut, and set `durationInFrames` to the cut length — so a new transcript resizes the video with no code change. The `durationInFrames={1}` on the element is a placeholder that `calculateMetadata` always replaces.
 
 The caption font is pinned: `CaptionedVideo.tsx` calls `loadFont` from `@remotion/google-fonts/Montserrat` at module scope and passes the returned `fontFamily` into the style. Without this the render inherits whatever font the rendering machine happens to have — DejaVu on this Linux box, something else on Lambda. Remotion blocks the render until the face is ready, so the first frames never draw in a fallback. Swap fonts by changing that one import and weight; both must exist in the Google Fonts catalog.
 
@@ -78,13 +78,13 @@ Inside a component, `useCurrentFrame()` drives all animation. Remotion renders e
 ## The one-command path
 
 ```
-npm run short -- <audio-or-video> [out.mp4] [--from=12] [--to=1:30]
+npm run short -- <file> [more files...] [--out=x.mp4] [--from=12] [--to=1:30]
 node scripts/short.mts --check                  # routing self-check, no API call, no render
 ```
 
-Output defaults to `out/short.mp4`.
+**Every positional argument is an input**, played in the order given; the destination is named with `--out=` and defaults to `out/short.mp4`. Guessing which trailing path was meant as the output is exactly the magic that transcribes the file you meant to write.
 
-`scripts/short.mts` copies the input into `public/` if it is not already there (compositions can only read from `public/`), transcribes it, writes `public/captions.json`, and shells out to `remotion render` with the right props. Routing lives in `scripts/lib/short.mts`: a video extension becomes `videoSrc` and brings its own audio, anything else becomes `audioSrc` over black.
+`scripts/short.mts` copies each input into `public/` if it is not already there (compositions can only read from `public/`), transcribes them one at a time, writes `public/captions.json`, and shells out to `remotion render`. Routing lives in `scripts/lib/short.mts`: a video extension plays behind the captions with its own audio, anything else plays over black.
 
 It renders by spawning the Remotion CLI rather than calling `@remotion/renderer` directly — deliberately. The Node API ignores `remotion.config.ts`, so the Tailwind webpack override would have to be re-passed by hand and silently breaks styling if forgotten.
 
@@ -99,7 +99,7 @@ npm run transcribe -- <audio-path-or-url> [out.json]   # key read from .env
 node scripts/transcribe.mts --check                    # mapping self-check, no API call, no key
 ```
 
-`ASSEMBLYAI_API_KEY` lives in `.env` (gitignored; `.env.example` is the template). Node loads it via `--env-file-if-exists` in the npm script. Output defaults to `public/captions.json`. Node runs the `.mts` directly via native type stripping — no build step, no ts-node.
+`ASSEMBLYAI_API_KEY` lives in `.env` (gitignored; `.env.example` is the template). Node loads it via `--env-file-if-exists` in the npm script. Output defaults to `public/captions.json`, written as `{clips: [...]}` — the same shape `npm run short` produces, with one entry. Node runs the `.mts` directly via native type stripping — no build step, no ts-node.
 
 The one non-obvious detail, and the reason the mapping isn't a plain field rename: `createTikTokStyleCaptions` from `@remotion/captions` splits pages on a **leading space** in `Caption.text` and otherwise concatenates tokens verbatim. AssemblyAI's words carry no leading space, so a naive mapping glues the whole transcript into a single unbreakable word. `wordsToCaptions` prepends a space to every word except the first; `--check` asserts exactly that and fails if it regresses.
 
@@ -113,7 +113,7 @@ The one non-obvious detail, and the reason the mapping isn't a plain field renam
 
 ```
 npm run short -- clip.mp4 out.mp4 --from=12 --to=1:30
-npm run render -- Captions out/v.mp4 --props='{"videoSrc":"clip.mp4","clipStartMs":12000,"clipEndMs":90000}'
+npm run render -- Captions out/v.mp4 --props='{"clipStartMs":12000,"clipEndMs":90000}'
 ```
 
 The window is applied *before* the silence cut, so both compose: the window picks the take, the silence cut tightens what is inside it.
@@ -134,25 +134,24 @@ Measured on 14.08s of speech with a 4s silence spliced into the middle: output 1
 
 `npm run check` covers this: gap detection, frame counts, the shifted timing, empty input, and `maxGapMs: null` leaving the media untouched.
 
+## Chaining clips
+
+Several inputs become one short. Each clip is transcribed on its own and keeps its own source timestamps; only the *output* timeline is shared. `trimClips` in `src/lib/silence.ts` runs the trim per clip and lays the results end to end, accumulating a frame offset — so a clip's position in the run never changes the `trimBefore`/`trimAfter` that read from its file.
+
+`public/captions.json` therefore holds `{clips: [{src, isVideo, captions}]}`, and every `Segment` names the file it reads from. That is why the composition needs no `videoSrc`/`audioSrc` props: **the sources live in the transcript**, so `npm run render -- Captions out/v.mp4` works with no props at all. Video and audio clips mix freely in one run — each segment renders as `<OffthreadVideo>` or `<Audio>` according to its own `isVideo`.
+
+`--from`/`--to` are rejected with several inputs: a window into *which* recording has no honest answer. Trim the clips first.
+
 ## Footage behind the captions
 
-`CaptionedVideo` takes two optional sources, both filenames inside `public/`:
-
-- `videoSrc` — footage rendered through `<OffthreadVideo>` with `objectFit: cover`, which crops horizontal material to 9:16 around its centre rather than letterboxing it. The clip must be at least as long as the captions. Its own audio track plays.
-- `audioSrc` — a separate audio file, for footage with no usable audio (or no footage at all).
-
-Both default to `null`, so **the composition renders silent on black** unless they are passed:
-
-```
-npm run render -- Captions out/short.mp4 --props='{"videoSrc":"clip.mp4","audioSrc":"voz.mp3"}'
-```
+Footage is rendered through `<OffthreadVideo>` with `objectFit: cover`, which crops horizontal material to 9:16 around its centre rather than letterboxing it. Audio-only clips play over black.
 
 Two layout facts that are easy to get wrong and invisible until a frame is rendered — both cost a render to find:
 
 - The captions live in their own `<AbsoluteFill>`. The video layer is positioned, so a statically-positioned caption element is painted *underneath* it and disappears entirely.
 - `AbsoluteFill` is `flex-direction: column`. Without `flex-row` every word stacks on its own line.
 
-Expect video-backed renders to be far slower — 20 seconds of 1080p footage took ~3m50s versus ~18s for the same captions on black, since `OffthreadVideo` extracts each frame with ffmpeg. Synthetic high-noise test footage is the worst case; real footage decodes faster.
+Expect video-backed renders to be far slower — see below — 20 seconds of 1080p footage took ~3m50s versus ~18s for the same captions on black, since `OffthreadVideo` extracts each frame with ffmpeg. Synthetic high-noise test footage is the worst case; real footage decodes faster.
 
 To regenerate the throwaway background fixture (gitignored, needs system ffmpeg — Remotion's bundled build has most filters compiled out):
 

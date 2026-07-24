@@ -2,9 +2,11 @@
 //   npm run transcribe -- <audio-path-or-url> [out.json]
 //   node scripts/transcribe.mts --check     # self-check, no API call, no key
 import { writeFileSync } from "node:fs";
+import { basename } from "node:path";
 import type { TranscriptWord } from "assemblyai";
 import { createTikTokStyleCaptions } from "@remotion/captions";
 import { transcribeToCaptions, wordsToCaptions } from "./lib/captions.mts";
+import { clipForInput } from "./lib/short.mts";
 
 const DEFAULT_OUT = "public/captions.json";
 
@@ -49,7 +51,10 @@ const main = async () => {
   }
 
   const captions = await transcribeToCaptions({ audio, apiKey });
-  writeFileSync(out, JSON.stringify(captions, null, 2));
+  // Same one-clip-per-entry shape the composition reads; `npm run short`
+  // writes several entries into the same file.
+  const clip = { ...clipForInput(basename(audio)), captions };
+  writeFileSync(out, JSON.stringify({ clips: [clip] }, null, 2));
   console.log(`${captions.length} words -> ${out}`);
 };
 

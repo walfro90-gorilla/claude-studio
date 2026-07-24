@@ -27,12 +27,11 @@ export const COMBINE_TOKENS_WITHIN_MS = 800;
 export type CaptionedVideoProps = {
   /** Already shifted onto the trimmed timeline by calculateMetadata. */
   captions: Caption[];
-  /** The stretches of media that survived the silence cut, in play order. */
+  /**
+   * The stretches of media that survived the cut, in play order. Each one
+   * names its own source, so a run can span several clips.
+   */
   segments: Segment[];
-  /** Filename inside public/. Its own audio track plays; must cover the whole video. */
-  videoSrc: string | null;
-  /** Filename inside public/. Use when the footage has no usable audio of its own. */
-  audioSrc: string | null;
   /** Manual in/out points into the source, in ms. Consumed by calculateMetadata. */
   clipStartMs: number | null;
   clipEndMs: number | null;
@@ -41,8 +40,6 @@ export type CaptionedVideoProps = {
 export const CaptionedVideo: React.FC<CaptionedVideoProps> = ({
   captions,
   segments,
-  videoSrc,
-  audioSrc,
 }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
@@ -69,22 +66,21 @@ export const CaptionedVideo: React.FC<CaptionedVideoProps> = ({
       <Series>
         {segments.map((segment, i) => (
           <Series.Sequence
-            key={`${segment.trimBefore}-${i}`}
+            key={`${segment.src}-${segment.trimBefore}-${i}`}
             durationInFrames={segment.durationInFrames}
           >
-            {videoSrc === null ? null : (
+            {segment.isVideo ? (
               <OffthreadVideo
-                src={staticFile(videoSrc)}
+                src={staticFile(segment.src)}
                 trimBefore={segment.trimBefore}
                 trimAfter={segment.trimAfter}
                 // Crops horizontal footage to 9:16 around its centre instead of
                 // letterboxing it. Reframe in the editor if the subject is off-centre.
                 style={{ width: "100%", height: "100%", objectFit: "cover" }}
               />
-            )}
-            {audioSrc === null ? null : (
+            ) : (
               <Audio
-                src={staticFile(audioSrc)}
+                src={staticFile(segment.src)}
                 trimBefore={segment.trimBefore}
                 trimAfter={segment.trimAfter}
               />

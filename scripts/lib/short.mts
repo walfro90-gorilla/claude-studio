@@ -7,19 +7,11 @@ const VIDEO_EXTENSIONS = [".mp4", ".mov", ".mkv", ".webm", ".avi", ".m4v"];
 export const isVideo = (file: string): boolean =>
   VIDEO_EXTENSIONS.includes(extname(file).toLowerCase());
 
-export type ShortProps = {
-  videoSrc: string | null;
-  audioSrc: string | null;
-};
-
-/**
- * Video goes behind the captions and brings its own audio; anything else is
- * treated as an audio track over black.
- */
-export const propsForInput = (publicName: string): ShortProps =>
-  isVideo(publicName)
-    ? { videoSrc: publicName, audioSrc: null }
-    : { videoSrc: null, audioSrc: publicName };
+/** Video plays behind the captions and brings its own audio; anything else plays over black. */
+export const clipForInput = (publicName: string) => ({
+  src: publicName,
+  isVideo: isVideo(publicName),
+});
 
 /** `90`, `1:30` and `1:02:03` all mean the same thing to a person. */
 export const parseTime = (value: string): number => {
@@ -33,17 +25,33 @@ export const parseTime = (value: string): number => {
 
 export type ClipWindow = { clipStartMs: number | null; clipEndMs: number | null };
 
-/** Reads --from/--to out of argv and returns what is left. */
-export const parseArgs = (
-  argv: string[],
-): { rest: string[]; window: ClipWindow } => {
-  const rest: string[] = [];
+export type ParsedArgs = {
+  /** Input files, in the order they should play. */
+  inputs: string[];
+  out: string;
+  window: ClipWindow;
+};
+
+const DEFAULT_OUT = "out/short.mp4";
+
+/**
+ * Every positional argument is an input; the output is named with --out.
+ * Guessing which trailing path was meant as the destination is exactly the
+ * kind of magic that silently transcribes the file you meant to write.
+ */
+export const parseArgs = (argv: string[]): ParsedArgs => {
+  const inputs: string[] = [];
   const window: ClipWindow = { clipStartMs: null, clipEndMs: null };
+  let out = DEFAULT_OUT;
 
   for (const arg of argv) {
-    const match = /^--(from|to)=(.+)$/.exec(arg);
+    const match = /^--(from|to|out)=(.+)$/.exec(arg);
     if (match === null) {
-      rest.push(arg);
+      inputs.push(arg);
+      continue;
+    }
+    if (match[1] === "out") {
+      out = match[2];
       continue;
     }
     const ms = parseTime(match[2]);
@@ -61,5 +69,13 @@ export const parseArgs = (
   ) {
     throw new Error("--to must come after --from");
   }
-  return { rest, window };
+  // A window is a window into ONE recording; across several it would silently
+  // mean something different from what anyone expects.
+  if (
+    inputs.length > 1 &&
+    (window.clipStartMs !== null || window.clipEndMs !== null)
+  ) {
+    throw new Error("--from/--to work on a single input; trim the clips first");
+  }
+  return { inputs, out, window };
 };

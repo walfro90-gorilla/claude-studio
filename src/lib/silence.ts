@@ -3,8 +3,20 @@
 // bundled composition and inside the Node self-check.
 import type { Caption } from "@remotion/captions";
 
+/** A transcribed source file, as written into public/captions.json. */
+export type Clip = {
+  /** Filename inside public/. */
+  src: string;
+  /** Video plays behind the captions; audio plays over black. */
+  isVideo: boolean;
+  captions: Caption[];
+};
+
 /** One kept stretch of media, already expressed in frames of the output. */
 export type Segment = {
+  /** Which source file this stretch is read from. */
+  src: string;
+  isVideo: boolean;
   /** Frame of the SOURCE media this stretch starts at. */
   trimBefore: number;
   /** Frame of the SOURCE media this stretch ends at. */
@@ -24,6 +36,11 @@ export type TrimSilenceInput = {
   clipStartMs?: number | null;
   /** Manual out-point into the source, in ms. `null` runs to the end. */
   clipEndMs?: number | null;
+  /** Which file the segments read from. */
+  src?: string;
+  isVideo?: boolean;
+  /** Frames already used by earlier clips, so captions land on the joint timeline. */
+  frameOffset?: number;
 };
 
 export type TrimSilenceOutput = {
@@ -76,6 +93,9 @@ export const trimSilence = ({
   padMs,
   clipStartMs = null,
   clipEndMs = null,
+  src = "",
+  isVideo = false,
+  frameOffset: startFrame = 0,
 }: TrimSilenceInput): TrimSilenceOutput => {
   // Only words spoken WHOLE inside the window survive it. Keeping a word that
   // straddles an edge would clip its audio mid-syllable and, at the in-point,
@@ -103,7 +123,9 @@ export const trimSilence = ({
 
   const segments: Segment[] = [];
   const shifted: Caption[] = [];
-  let frameOffset = 0;
+  // Starts where the earlier clips left off, so captions land on the joint
+  // timeline rather than each clip's own.
+  let frameOffset = startFrame;
 
   for (const span of kept) {
     const trimBefore = msToFrames(span.startMs);
@@ -127,9 +149,48 @@ export const trimSilence = ({
       });
     }
 
-    segments.push({ trimBefore, trimAfter, durationInFrames });
+    segments.push({ src, isVideo, trimBefore, trimAfter, durationInFrames });
     frameOffset += durationInFrames;
   }
 
-  return { segments, captions: shifted, durationInFrames: frameOffset };
+  // durationInFrames counts only what this call added, so a caller accumulating
+  // across clips can add the results up without subtracting the offset back out.
+  return {
+    segments,
+    captions: shifted,
+    durationInFrames: frameOffset - startFrame,
+  };
+};
+
+export type TrimClipsInput = Omit<
+  TrimSilenceInput,
+  "captions" | "src" | "isVideo" | "frameOffset"
+> & { clips: Clip[] };
+
+/**
+ * Runs the trim over several clips and lays them end to end. Each clip keeps
+ * its own source timestamps; only the output timeline is shared.
+ */
+export const trimClips = ({
+  clips,
+  ...options
+}: TrimClipsInput): TrimSilenceOutput => {
+  const segments: Segment[] = [];
+  const captions: Caption[] = [];
+  let frameOffset = 0;
+
+  for (const clip of clips) {
+    const cut = trimSilence({
+      ...options,
+      captions: clip.captions,
+      src: clip.src,
+      isVideo: clip.isVideo,
+      frameOffset,
+    });
+    segments.push(...cut.segments);
+    captions.push(...cut.captions);
+    frameOffset += cut.durationInFrames;
+  }
+
+  return { segments, captions, durationInFrames: frameOffset };
 };

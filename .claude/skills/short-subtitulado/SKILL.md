@@ -12,10 +12,12 @@ Audio or video in, rendered `.mp4` out.
 When the caption settings are already right for this kind of material:
 
 ```
-npm run short -- <audio-or-video> [out.mp4] [--from=12] [--to=1:30]
+npm run short -- <file> [more files...] [--out=x.mp4] [--from=12] [--to=1:30]
 ```
 
-`--from` / `--to` pick the take out of a longer recording; both accept seconds, `mm:ss` or `hh:mm:ss`. Only words spoken whole inside the window are kept, so the output starts on the first complete word after `--from` rather than exactly at it.
+Every positional argument is an input, played in the order given — several files become one short, and video and audio clips can mix. The destination is `--out=`, defaulting to `out/short.mp4`.
+
+`--from` / `--to` pick the take out of a longer recording; both accept seconds, `mm:ss` or `hh:mm:ss`. Only words spoken whole inside the window are kept, so the output starts on the first complete word after `--from` rather than exactly at it. They are rejected with several inputs — trim the clips first.
 
 One command: copies the file into `public/`, transcribes it, cuts the silences, renders. A video input goes behind the captions and keeps its own audio; anything else plays over black.
 
@@ -34,6 +36,8 @@ npm run transcribe -- <audio-path-or-url>
 ```
 
 Writes `public/captions.json` (overwrites the previous one — if the user may still want it, copy it aside first). Needs `ASSEMBLYAI_API_KEY` in `.env`; the npm script loads it. A minute of audio takes a few seconds.
+
+This handles one file. For several clips in one short, use `npm run short` above — it transcribes each one and joins them.
 
 If the audio language is known and detection has misfired, pass `languageCode` through `transcribeToCaptions` in `scripts/lib/captions.mts` rather than retrying blind.
 
@@ -70,14 +74,7 @@ For a quick sanity pass first: `npm run render -- Captions out/test.mp4 --frames
 
 ## Footage and audio
 
-Both props are `null` by default, so **the render is silent on black unless they are set**. Put the files in `public/` and pass the filenames:
-
-```
-npm run render -- Captions out/short.mp4 --props='{"videoSrc":"clip.mp4","audioSrc":"voz.mp3"}'
-```
-
-- `videoSrc` — footage behind the captions, auto-cropped to 9:16 around its centre. Must be at least as long as the captions; its own audio plays.
-- `audioSrc` — separate audio, for footage with no usable sound. Drop it when the video already carries the voice.
+The sources live in `public/captions.json`, written by the transcribe step, so **no `--props` are needed** — `npm run render -- Captions out/short.mp4` picks up whatever was last transcribed. A video input plays behind the captions cropped to 9:16 around its centre and keeps its own audio; anything else plays over black.
 
 A video-backed render is much slower than one on black (minutes, not seconds). Tune the pacing on stills first, render the video once at the end.
 

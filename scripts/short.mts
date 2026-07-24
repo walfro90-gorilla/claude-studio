@@ -1,15 +1,15 @@
-// One command: media file in, subtitled vertical short out.
-//   npm run short -- <audio-or-video> [out.mp4]
+// One command: media files in, one subtitled vertical short out.
+//   npm run short -- <file> [more files...] [--out=x.mp4] [--from=12] [--to=1:30]
 //   node scripts/short.mts --check      # self-check, no API call, no render
 import { spawnSync } from "node:child_process";
 import { copyFileSync, existsSync, writeFileSync } from "node:fs";
 import { basename, resolve } from "node:path";
 import type { Caption } from "@remotion/captions";
 import { transcribeToCaptions } from "./lib/captions.mts";
-import { isVideo, parseArgs, parseTime, propsForInput } from "./lib/short.mts";
+import { clipForInput, isVideo, parseArgs, parseTime } from "./lib/short.mts";
 // Crossing into src/ is safe here and only here: silence.ts is pure, imports
 // nothing but a type, and touches neither the DOM nor the filesystem.
-import { trimSilence } from "../src/lib/silence.ts";
+import { trimClips, trimSilence } from "../src/lib/silence.ts";
 
 const PUBLIC_DIR = resolve("public");
 const CAPTIONS_OUT = resolve(PUBLIC_DIR, "captions.json");
@@ -18,16 +18,17 @@ const check = () => {
   if (!isVideo("clip.MP4")) throw new Error("extension match must ignore case");
   if (isVideo("voz.mp3")) throw new Error("mp3 is not video");
 
-  const video = propsForInput("clip.mp4");
-  if (video.videoSrc !== "clip.mp4" || video.audioSrc !== null) {
-    throw new Error("video input must become videoSrc alone");
+  const video = clipForInput("clip.mp4");
+  if (video.src !== "clip.mp4" || !video.isVideo) {
+    throw new Error("a video input must be marked as video");
   }
-  const audio = propsForInput("voz.mp3");
-  if (audio.audioSrc !== "voz.mp3" || audio.videoSrc !== null) {
-    throw new Error("audio input must become audioSrc alone");
+  const audio = clipForInput("voz.mp3");
+  if (audio.src !== "voz.mp3" || audio.isVideo) {
+    throw new Error("an audio input must not be marked as video");
   }
 
   checkSilence();
+  checkConcat();
   checkClip();
   console.log("ok");
 };
@@ -105,20 +106,34 @@ const checkClip = () => {
     if (!threw) throw new Error(`parseTime must reject ${JSON.stringify(bad)}`);
   }
 
-  const parsed = parseArgs(["clip.mp4", "--from=1:30", "out.mp4", "--to=100"]);
-  if (parsed.rest.join() !== "clip.mp4,out.mp4") {
-    throw new Error("flags must be stripped and the order of the rest kept");
+  const parsed = parseArgs(["clip.mp4", "--from=1:30", "--out=v.mp4", "--to=100"]);
+  if (parsed.inputs.join() !== "clip.mp4") {
+    throw new Error("flags must be stripped, leaving only the inputs");
   }
+  if (parsed.out !== "v.mp4") throw new Error("--out must set the destination");
   if (parsed.window.clipStartMs !== 90_000 || parsed.window.clipEndMs !== 100_000) {
     throw new Error("--from/--to must land in the window");
   }
-  let inverted = false;
-  try {
-    parseArgs(["--from=30", "--to=10"]);
-  } catch {
-    inverted = true;
+
+  // Several inputs are several clips, in the order they were given.
+  const many = parseArgs(["a.mp4", "b.mp3", "c.mov"]);
+  if (many.inputs.join() !== "a.mp4,b.mp3,c.mov") {
+    throw new Error("every positional argument is an input, order kept");
   }
-  if (!inverted) throw new Error("--to before --from must be rejected");
+  if (many.out !== "out/short.mp4") throw new Error("--out must have a default");
+
+  for (const [argv, why] of [
+    [["--from=30", "--to=10"], "--to before --from"],
+    [["a.mp4", "b.mp4", "--from=5"], "a window across several inputs"],
+  ] as const) {
+    let threw = false;
+    try {
+      parseArgs([...argv]);
+    } catch {
+      threw = true;
+    }
+    if (!threw) throw new Error(`${why} must be rejected`);
+  }
 
   // A word straddling either edge is dropped whole: keeping it would clip its
   // audio mid-syllable, and at the in-point its caption would shift to a
@@ -204,6 +219,83 @@ const checkClip = () => {
 
 const msToFrames = (ms: number, fps: number) => Math.round((ms / 1000) * fps);
 
+const checkConcat = () => {
+  const fps = 30;
+  const options = { fps, maxGapMs: 700, padMs: 150 };
+  const clips = [
+    { src: "a.mp4", isVideo: true, captions: SPEECH },
+    { src: "b.mp3", isVideo: false, captions: SPEECH },
+  ];
+  const joined = trimClips({ clips, ...options });
+  const alone = trimSilence({ captions: SPEECH, ...options });
+
+  if (joined.durationInFrames !== alone.durationInFrames * 2) {
+    throw new Error(
+      `two identical clips must run twice as long: ${joined.durationInFrames} vs ${alone.durationInFrames * 2}`,
+    );
+  }
+  if (joined.segments.length !== alone.segments.length * 2) {
+    throw new Error("every clip must contribute its own segments");
+  }
+  if (joined.captions.length !== SPEECH.length * 2) {
+    throw new Error("no words may be lost at the joint");
+  }
+
+  // Each segment must read from its own file, and keep its own source times —
+  // only the OUTPUT timeline is shared.
+  const perClip = alone.segments.length;
+  if (joined.segments.slice(0, perClip).some((s) => s.src !== "a.mp4")) {
+    throw new Error("the first clip's segments must read from the first file");
+  }
+  if (joined.segments.slice(perClip).some((s) => s.src !== "b.mp3")) {
+    throw new Error("the second clip's segments must read from the second file");
+  }
+  if (joined.segments.slice(perClip).some((s) => !s.isVideo !== true)) {
+    throw new Error("an audio clip must not be rendered as video");
+  }
+  joined.segments.slice(perClip).forEach((segment, i) => {
+    if (segment.trimBefore !== alone.segments[i].trimBefore) {
+      throw new Error("source trim points must not shift with the clip's position");
+    }
+  });
+
+  // The second clip's captions must sit after the first clip ends, and the
+  // whole run must stay inside the declared duration.
+  const firstEndsMs = (alone.durationInFrames / fps) * 1000;
+  const second = joined.captions.slice(SPEECH.length);
+  if (second.some((c) => c.startMs < firstEndsMs - 1000 / fps)) {
+    throw new Error("the second clip's captions must not play during the first");
+  }
+  const endMs = (joined.durationInFrames / fps) * 1000;
+  if (joined.captions.some((c) => c.startMs < 0 || c.endMs > endMs)) {
+    throw new Error("a caption fell outside the joint timeline");
+  }
+  // Segment durations must add up to the declared total, or Series and the
+  // composition disagree about where the video ends.
+  const summed = joined.segments.reduce((n, s) => n + s.durationInFrames, 0);
+  if (summed !== joined.durationInFrames) {
+    throw new Error(`segments sum to ${summed}, duration says ${joined.durationInFrames}`);
+  }
+
+  if (trimClips({ clips: [], ...options }).durationInFrames !== 0) {
+    throw new Error("no clips must produce nothing");
+  }
+  // A clip whose words were all filtered out must not break the ones after it.
+  const withEmpty = trimClips({
+    clips: [
+      { src: "a.mp4", isVideo: true, captions: [] },
+      { src: "b.mp3", isVideo: false, captions: SPEECH },
+    ],
+    ...options,
+  });
+  if (withEmpty.durationInFrames !== alone.durationInFrames) {
+    throw new Error("an empty clip must contribute nothing and break nothing");
+  }
+  if (withEmpty.segments.some((s) => s.src !== "b.mp3")) {
+    throw new Error("an empty clip must contribute no segments");
+  }
+};
+
 /** Compositions can only read from public/, so anything outside it is copied in. */
 const ensureInPublic = (input: string): string => {
   const source = resolve(input);
@@ -220,34 +312,41 @@ const ensureInPublic = (input: string): string => {
 };
 
 const main = async () => {
-  const { rest, window } = parseArgs(process.argv.slice(2));
-  const [input, out = "out/short.mp4"] = rest;
-  if (input === "--check") {
+  if (process.argv[2] === "--check") {
     return check();
   }
+  const { inputs, out, window } = parseArgs(process.argv.slice(2));
 
   const apiKey = process.env.ASSEMBLYAI_API_KEY;
-  if (!input || !apiKey) {
+  if (inputs.length === 0 || !apiKey) {
     throw new Error(
-      "usage: npm run short -- <audio-or-video> [out.mp4] [--from=12] [--to=1:30]\n" +
+      "usage: npm run short -- <file> [more files...] [--out=x.mp4] [--from=12] [--to=1:30]\n" +
         "       (needs ASSEMBLYAI_API_KEY in .env)",
     );
   }
 
-  const name = ensureInPublic(input);
+  const names = inputs.map(ensureInPublic);
+  const clips = [];
 
-  // ponytail: the file is uploaded to AssemblyAI whole, video track included.
-  // Strip the audio out with ffmpeg first if the uploads get painful.
-  console.log(`transcribing ${name}...`);
-  const captions = await transcribeToCaptions({
-    audio: resolve(PUBLIC_DIR, name),
-    apiKey,
-  });
-  writeFileSync(CAPTIONS_OUT, JSON.stringify(captions, null, 2));
-  console.log(`${captions.length} words -> public/captions.json`);
+  // Transcribed one at a time rather than in parallel: AssemblyAI rate-limits
+  // per account, and a short is a handful of clips, not hundreds.
+  for (const name of names) {
+    console.log(`transcribing ${name}...`);
+    // ponytail: the file is uploaded whole, video track included. Strip the
+    // audio out with ffmpeg first if the uploads get painful.
+    const captions = await transcribeToCaptions({
+      audio: resolve(PUBLIC_DIR, name),
+      apiKey,
+    });
+    console.log(`  ${captions.length} words`);
+    clips.push({ ...clipForInput(name), captions });
+  }
 
-  const props = JSON.stringify({ ...propsForInput(name), ...window });
-  console.log(`rendering ${out}${isVideo(name) ? " (video behind captions — this takes minutes)" : ""}`);
+  writeFileSync(CAPTIONS_OUT, JSON.stringify({ clips }, null, 2));
+  console.log(`${clips.length} clip(s) -> public/captions.json`);
+
+  const props = JSON.stringify(window);
+  console.log(`rendering ${out}${names.some(isVideo) ? " (video behind captions — this takes minutes)" : ""}`);
   const render = spawnSync(
     "npx",
     ["remotion", "render", "Captions", out, `--props=${props}`],

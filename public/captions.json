@@ -1,387 +1,395 @@
-[
-  {
-    "text": "Smoke",
-    "startMs": 32,
-    "endMs": 610,
-    "timestampMs": 321,
-    "confidence": 0.98808783
-  },
-  {
-    "text": " from",
-    "startMs": 674,
-    "endMs": 819,
-    "timestampMs": 746.5,
-    "confidence": 0.9985261
-  },
-  {
-    "text": " hundreds",
-    "startMs": 915,
-    "endMs": 1445,
-    "timestampMs": 1180,
-    "confidence": 0.99997985
-  },
-  {
-    "text": " of",
-    "startMs": 1477,
-    "endMs": 1622,
-    "timestampMs": 1549.5,
-    "confidence": 0.9999933
-  },
-  {
-    "text": " wildfires",
-    "startMs": 1638,
-    "endMs": 2168,
-    "timestampMs": 1903,
-    "confidence": 0.9999896
-  },
-  {
-    "text": " in",
-    "startMs": 2280,
-    "endMs": 2329,
-    "timestampMs": 2304.5,
-    "confidence": 0.99998355
-  },
-  {
-    "text": " Canada",
-    "startMs": 2441,
-    "endMs": 2843,
-    "timestampMs": 2642,
-    "confidence": 0.9999908
-  },
-  {
-    "text": " is",
-    "startMs": 3324,
-    "endMs": 3421,
-    "timestampMs": 3372.5,
-    "confidence": 0.9991811
-  },
-  {
-    "text": " triggering",
-    "startMs": 3485,
-    "endMs": 3855,
-    "timestampMs": 3670,
-    "confidence": 0.9999764
-  },
-  {
-    "text": " air",
-    "startMs": 3967,
-    "endMs": 4079,
-    "timestampMs": 4023,
-    "confidence": 0.99981576
-  },
-  {
-    "text": " quality",
-    "startMs": 4192,
-    "endMs": 4577,
-    "timestampMs": 4384.5,
-    "confidence": 0.9945192
-  },
-  {
-    "text": " alerts",
-    "startMs": 4690,
-    "endMs": 5107,
-    "timestampMs": 4898.5,
-    "confidence": 0.99996805
-  },
-  {
-    "text": " throughout",
-    "startMs": 5156,
-    "endMs": 5557,
-    "timestampMs": 5356.5,
-    "confidence": 0.9999702
-  },
-  {
-    "text": " the",
-    "startMs": 5557,
-    "endMs": 5637,
-    "timestampMs": 5597,
-    "confidence": 0.99998534
-  },
-  {
-    "text": " U.S.",
-    "startMs": 5654,
-    "endMs": 6135,
-    "timestampMs": 5894.5,
-    "confidence": 0.96883726
-  },
-  {
-    "text": " Skylines",
-    "startMs": 6473,
-    "endMs": 7228,
-    "timestampMs": 6850.5,
-    "confidence": 0.9998786
-  },
-  {
-    "text": " from",
-    "startMs": 7244,
-    "endMs": 7372,
-    "timestampMs": 7308,
-    "confidence": 0.99672514
-  },
-  {
-    "text": " Maine",
-    "startMs": 7501,
-    "endMs": 7790,
-    "timestampMs": 7645.5,
-    "confidence": 0.9999863
-  },
-  {
-    "text": " to",
-    "startMs": 8063,
-    "endMs": 8159,
-    "timestampMs": 8111,
-    "confidence": 0.97038496
-  },
-  {
-    "text": " Maryland",
-    "startMs": 8159,
-    "endMs": 8673,
-    "timestampMs": 8416,
-    "confidence": 0.99998
-  },
-  {
-    "text": " to",
-    "startMs": 8786,
-    "endMs": 8866,
-    "timestampMs": 8826,
-    "confidence": 0.9965082
-  },
-  {
-    "text": " Minnesota",
-    "startMs": 8866,
-    "endMs": 9621,
-    "timestampMs": 9243.5,
-    "confidence": 0.9999914
-  },
-  {
-    "text": " are",
-    "startMs": 9814,
-    "endMs": 9974,
-    "timestampMs": 9894,
-    "confidence": 0.9999243
-  },
-  {
-    "text": " gray",
-    "startMs": 9974,
-    "endMs": 10215,
-    "timestampMs": 10094.5,
-    "confidence": 0.9946051
-  },
-  {
-    "text": " and",
-    "startMs": 10296,
-    "endMs": 10360,
-    "timestampMs": 10328,
-    "confidence": 0.99989617
-  },
-  {
-    "text": " smoggy.",
-    "startMs": 10376,
-    "endMs": 10761,
-    "timestampMs": 10568.5,
-    "confidence": 0.8598533
-  },
-  {
-    "text": " And",
-    "startMs": 11275,
-    "endMs": 11340,
-    "timestampMs": 11307.5,
-    "confidence": 0.9994936
-  },
-  {
-    "text": " in",
-    "startMs": 11356,
-    "endMs": 11404,
-    "timestampMs": 11380,
-    "confidence": 0.99771273
-  },
-  {
-    "text": " some",
-    "startMs": 11452,
-    "endMs": 11725,
-    "timestampMs": 11588.5,
-    "confidence": 0.99998486
-  },
-  {
-    "text": " places,",
-    "startMs": 11822,
-    "endMs": 12127,
-    "timestampMs": 11974.5,
-    "confidence": 0.99789995
-  },
-  {
-    "text": " the",
-    "startMs": 12223,
-    "endMs": 12384,
-    "timestampMs": 12303.5,
-    "confidence": 0.99989915
-  },
-  {
-    "text": " air",
-    "startMs": 12400,
-    "endMs": 12544,
-    "timestampMs": 12472,
-    "confidence": 0.9999515
-  },
-  {
-    "text": " quality",
-    "startMs": 12560,
-    "endMs": 12930,
-    "timestampMs": 12745,
-    "confidence": 0.9993587
-  },
-  {
-    "text": " warnings",
-    "startMs": 13026,
-    "endMs": 13331,
-    "timestampMs": 13178.5,
-    "confidence": 0.99994683
-  },
-  {
-    "text": " include",
-    "startMs": 13444,
-    "endMs": 13861,
-    "timestampMs": 13652.5,
-    "confidence": 0.9999354
-  },
-  {
-    "text": " the",
-    "startMs": 13861,
-    "endMs": 13958,
-    "timestampMs": 13909.5,
-    "confidence": 0.9990872
-  },
-  {
-    "text": " warning",
-    "startMs": 14006,
-    "endMs": 14247,
-    "timestampMs": 14126.5,
-    "confidence": 0.9999367
-  },
-  {
-    "text": " to",
-    "startMs": 14311,
-    "endMs": 14408,
-    "timestampMs": 14359.5,
-    "confidence": 0.99982953
-  },
-  {
-    "text": " stay",
-    "startMs": 14408,
-    "endMs": 14761,
-    "timestampMs": 14584.5,
-    "confidence": 0.9997919
-  },
-  {
-    "text": " inside.",
-    "startMs": 14954,
-    "endMs": 15660,
-    "timestampMs": 15307,
-    "confidence": 0.9998409
-  },
-  {
-    "text": " We",
-    "startMs": 16158,
-    "endMs": 16239,
-    "timestampMs": 16198.5,
-    "confidence": 0.99761945
-  },
-  {
-    "text": " wanted",
-    "startMs": 16239,
-    "endMs": 16399,
-    "timestampMs": 16319,
-    "confidence": 0.9996099
-  },
-  {
-    "text": " to",
-    "startMs": 16399,
-    "endMs": 16496,
-    "timestampMs": 16447.5,
-    "confidence": 0.99977785
-  },
-  {
-    "text": " better",
-    "startMs": 16496,
-    "endMs": 16721,
-    "timestampMs": 16608.5,
-    "confidence": 0.99977523
-  },
-  {
-    "text": " understand",
-    "startMs": 16721,
-    "endMs": 17106,
-    "timestampMs": 16913.5,
-    "confidence": 0.99991655
-  },
-  {
-    "text": " what's",
-    "startMs": 17202,
-    "endMs": 17443,
-    "timestampMs": 17322.5,
-    "confidence": 0.9997235
-  },
-  {
-    "text": " happening",
-    "startMs": 17443,
-    "endMs": 17829,
-    "timestampMs": 17636,
-    "confidence": 0.9999201
-  },
-  {
-    "text": " here",
-    "startMs": 17845,
-    "endMs": 17973,
-    "timestampMs": 17909,
-    "confidence": 0.99983275
-  },
-  {
-    "text": " and",
-    "startMs": 18086,
-    "endMs": 18166,
-    "timestampMs": 18126,
-    "confidence": 0.9939009
-  },
-  {
-    "text": " why,",
-    "startMs": 18263,
-    "endMs": 18375,
-    "timestampMs": 18319,
-    "confidence": 0.9626917
-  },
-  {
-    "text": " so",
-    "startMs": 18520,
-    "endMs": 18600,
-    "timestampMs": 18560,
-    "confidence": 0.99814606
-  },
-  {
-    "text": " we",
-    "startMs": 18664,
-    "endMs": 18744,
-    "timestampMs": 18704,
-    "confidence": 0.9995272
-  },
-  {
-    "text": " called",
-    "startMs": 18809,
-    "endMs": 19050,
-    "timestampMs": 18929.5,
-    "confidence": 0.99943084
-  },
-  {
-    "text": " Peter",
-    "startMs": 19050,
-    "endMs": 19307,
-    "timestampMs": 19178.5,
-    "confidence": 0.9982816
-  },
-  {
-    "text": " DeCarlo.",
-    "startMs": 19307,
-    "endMs": 19837,
-    "timestampMs": 19572,
-    "confidence": 0.75996983
-  }
-]
+{
+  "clips": [
+    {
+      "src": "sample.mp3",
+      "isVideo": false,
+      "captions": [
+        {
+          "text": "Smoke",
+          "startMs": 32,
+          "endMs": 610,
+          "timestampMs": 321,
+          "confidence": 0.98808783
+        },
+        {
+          "text": " from",
+          "startMs": 674,
+          "endMs": 819,
+          "timestampMs": 746.5,
+          "confidence": 0.9985261
+        },
+        {
+          "text": " hundreds",
+          "startMs": 915,
+          "endMs": 1445,
+          "timestampMs": 1180,
+          "confidence": 0.99997985
+        },
+        {
+          "text": " of",
+          "startMs": 1477,
+          "endMs": 1622,
+          "timestampMs": 1549.5,
+          "confidence": 0.9999933
+        },
+        {
+          "text": " wildfires",
+          "startMs": 1638,
+          "endMs": 2168,
+          "timestampMs": 1903,
+          "confidence": 0.9999896
+        },
+        {
+          "text": " in",
+          "startMs": 2280,
+          "endMs": 2329,
+          "timestampMs": 2304.5,
+          "confidence": 0.99998355
+        },
+        {
+          "text": " Canada",
+          "startMs": 2441,
+          "endMs": 2843,
+          "timestampMs": 2642,
+          "confidence": 0.9999908
+        },
+        {
+          "text": " is",
+          "startMs": 3324,
+          "endMs": 3421,
+          "timestampMs": 3372.5,
+          "confidence": 0.9991811
+        },
+        {
+          "text": " triggering",
+          "startMs": 3485,
+          "endMs": 3855,
+          "timestampMs": 3670,
+          "confidence": 0.9999764
+        },
+        {
+          "text": " air",
+          "startMs": 3967,
+          "endMs": 4079,
+          "timestampMs": 4023,
+          "confidence": 0.99981576
+        },
+        {
+          "text": " quality",
+          "startMs": 4192,
+          "endMs": 4577,
+          "timestampMs": 4384.5,
+          "confidence": 0.9945192
+        },
+        {
+          "text": " alerts",
+          "startMs": 4690,
+          "endMs": 5107,
+          "timestampMs": 4898.5,
+          "confidence": 0.99996805
+        },
+        {
+          "text": " throughout",
+          "startMs": 5156,
+          "endMs": 5557,
+          "timestampMs": 5356.5,
+          "confidence": 0.9999702
+        },
+        {
+          "text": " the",
+          "startMs": 5557,
+          "endMs": 5637,
+          "timestampMs": 5597,
+          "confidence": 0.99998534
+        },
+        {
+          "text": " U.S.",
+          "startMs": 5654,
+          "endMs": 6135,
+          "timestampMs": 5894.5,
+          "confidence": 0.96883726
+        },
+        {
+          "text": " Skylines",
+          "startMs": 6473,
+          "endMs": 7228,
+          "timestampMs": 6850.5,
+          "confidence": 0.9998786
+        },
+        {
+          "text": " from",
+          "startMs": 7244,
+          "endMs": 7372,
+          "timestampMs": 7308,
+          "confidence": 0.99672514
+        },
+        {
+          "text": " Maine",
+          "startMs": 7501,
+          "endMs": 7790,
+          "timestampMs": 7645.5,
+          "confidence": 0.9999863
+        },
+        {
+          "text": " to",
+          "startMs": 8063,
+          "endMs": 8159,
+          "timestampMs": 8111,
+          "confidence": 0.97038496
+        },
+        {
+          "text": " Maryland",
+          "startMs": 8159,
+          "endMs": 8673,
+          "timestampMs": 8416,
+          "confidence": 0.99998
+        },
+        {
+          "text": " to",
+          "startMs": 8786,
+          "endMs": 8866,
+          "timestampMs": 8826,
+          "confidence": 0.9965082
+        },
+        {
+          "text": " Minnesota",
+          "startMs": 8866,
+          "endMs": 9621,
+          "timestampMs": 9243.5,
+          "confidence": 0.9999914
+        },
+        {
+          "text": " are",
+          "startMs": 9814,
+          "endMs": 9974,
+          "timestampMs": 9894,
+          "confidence": 0.9999243
+        },
+        {
+          "text": " gray",
+          "startMs": 9974,
+          "endMs": 10215,
+          "timestampMs": 10094.5,
+          "confidence": 0.9946051
+        },
+        {
+          "text": " and",
+          "startMs": 10296,
+          "endMs": 10360,
+          "timestampMs": 10328,
+          "confidence": 0.99989617
+        },
+        {
+          "text": " smoggy.",
+          "startMs": 10376,
+          "endMs": 10761,
+          "timestampMs": 10568.5,
+          "confidence": 0.8598533
+        },
+        {
+          "text": " And",
+          "startMs": 11275,
+          "endMs": 11340,
+          "timestampMs": 11307.5,
+          "confidence": 0.9994936
+        },
+        {
+          "text": " in",
+          "startMs": 11356,
+          "endMs": 11404,
+          "timestampMs": 11380,
+          "confidence": 0.99771273
+        },
+        {
+          "text": " some",
+          "startMs": 11452,
+          "endMs": 11725,
+          "timestampMs": 11588.5,
+          "confidence": 0.99998486
+        },
+        {
+          "text": " places,",
+          "startMs": 11822,
+          "endMs": 12127,
+          "timestampMs": 11974.5,
+          "confidence": 0.99789995
+        },
+        {
+          "text": " the",
+          "startMs": 12223,
+          "endMs": 12384,
+          "timestampMs": 12303.5,
+          "confidence": 0.99989915
+        },
+        {
+          "text": " air",
+          "startMs": 12400,
+          "endMs": 12544,
+          "timestampMs": 12472,
+          "confidence": 0.9999515
+        },
+        {
+          "text": " quality",
+          "startMs": 12560,
+          "endMs": 12930,
+          "timestampMs": 12745,
+          "confidence": 0.9993587
+        },
+        {
+          "text": " warnings",
+          "startMs": 13026,
+          "endMs": 13331,
+          "timestampMs": 13178.5,
+          "confidence": 0.99994683
+        },
+        {
+          "text": " include",
+          "startMs": 13444,
+          "endMs": 13861,
+          "timestampMs": 13652.5,
+          "confidence": 0.9999354
+        },
+        {
+          "text": " the",
+          "startMs": 13861,
+          "endMs": 13958,
+          "timestampMs": 13909.5,
+          "confidence": 0.9990872
+        },
+        {
+          "text": " warning",
+          "startMs": 14006,
+          "endMs": 14247,
+          "timestampMs": 14126.5,
+          "confidence": 0.9999367
+        },
+        {
+          "text": " to",
+          "startMs": 14311,
+          "endMs": 14408,
+          "timestampMs": 14359.5,
+          "confidence": 0.99982953
+        },
+        {
+          "text": " stay",
+          "startMs": 14408,
+          "endMs": 14761,
+          "timestampMs": 14584.5,
+          "confidence": 0.9997919
+        },
+        {
+          "text": " inside.",
+          "startMs": 14954,
+          "endMs": 15660,
+          "timestampMs": 15307,
+          "confidence": 0.9998409
+        },
+        {
+          "text": " We",
+          "startMs": 16158,
+          "endMs": 16239,
+          "timestampMs": 16198.5,
+          "confidence": 0.99761945
+        },
+        {
+          "text": " wanted",
+          "startMs": 16239,
+          "endMs": 16399,
+          "timestampMs": 16319,
+          "confidence": 0.9996099
+        },
+        {
+          "text": " to",
+          "startMs": 16399,
+          "endMs": 16496,
+          "timestampMs": 16447.5,
+          "confidence": 0.99977785
+        },
+        {
+          "text": " better",
+          "startMs": 16496,
+          "endMs": 16721,
+          "timestampMs": 16608.5,
+          "confidence": 0.99977523
+        },
+        {
+          "text": " understand",
+          "startMs": 16721,
+          "endMs": 17106,
+          "timestampMs": 16913.5,
+          "confidence": 0.99991655
+        },
+        {
+          "text": " what's",
+          "startMs": 17202,
+          "endMs": 17443,
+          "timestampMs": 17322.5,
+          "confidence": 0.9997235
+        },
+        {
+          "text": " happening",
+          "startMs": 17443,
+          "endMs": 17829,
+          "timestampMs": 17636,
+          "confidence": 0.9999201
+        },
+        {
+          "text": " here",
+          "startMs": 17845,
+          "endMs": 17973,
+          "timestampMs": 17909,
+          "confidence": 0.99983275
+        },
+        {
+          "text": " and",
+          "startMs": 18086,
+          "endMs": 18166,
+          "timestampMs": 18126,
+          "confidence": 0.9939009
+        },
+        {
+          "text": " why,",
+          "startMs": 18263,
+          "endMs": 18375,
+          "timestampMs": 18319,
+          "confidence": 0.9626917
+        },
+        {
+          "text": " so",
+          "startMs": 18520,
+          "endMs": 18600,
+          "timestampMs": 18560,
+          "confidence": 0.99814606
+        },
+        {
+          "text": " we",
+          "startMs": 18664,
+          "endMs": 18744,
+          "timestampMs": 18704,
+          "confidence": 0.9995272
+        },
+        {
+          "text": " called",
+          "startMs": 18809,
+          "endMs": 19050,
+          "timestampMs": 18929.5,
+          "confidence": 0.99943084
+        },
+        {
+          "text": " Peter",
+          "startMs": 19050,
+          "endMs": 19307,
+          "timestampMs": 19178.5,
+          "confidence": 0.9982816
+        },
+        {
+          "text": " DeCarlo.",
+          "startMs": 19307,
+          "endMs": 19837,
+          "timestampMs": 19572,
+          "confidence": 0.75996983
+        }
+      ]
+    }
+  ]
+}

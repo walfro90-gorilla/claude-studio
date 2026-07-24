@@ -1,6 +1,5 @@
 import { CalculateMetadataFunction, Composition, staticFile } from "remotion";
-import type { Caption } from "@remotion/captions";
-import { trimSilence } from "../lib/silence";
+import { trimClips, type Clip } from "../lib/silence";
 import {
   CaptionedVideo,
   type CaptionedVideoProps,
@@ -23,8 +22,9 @@ const calculateMetadata: CalculateMetadataFunction<
   CaptionedVideoProps
 > = async ({ props }) => {
   const res = await fetch(staticFile(CAPTIONS_FILE));
-  const trimmed = trimSilence({
-    captions: (await res.json()) as Caption[],
+  const { clips } = (await res.json()) as { clips: Clip[] };
+  const trimmed = trimClips({
+    clips,
     fps: FPS,
     maxGapMs: TRIM_SILENCE_OVER_MS,
     padMs: PAD_MS,
@@ -54,8 +54,6 @@ export const Captions = () => {
       defaultProps={{
         captions: [],
         segments: [],
-        videoSrc: null,
-        audioSrc: null,
         clipStartMs: null,
         clipEndMs: null,
       }}
