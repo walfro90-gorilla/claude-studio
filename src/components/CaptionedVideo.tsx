@@ -33,6 +33,9 @@ export type CaptionedVideoProps = {
   videoSrc: string | null;
   /** Filename inside public/. Use when the footage has no usable audio of its own. */
   audioSrc: string | null;
+  /** Manual in/out points into the source, in ms. Consumed by calculateMetadata. */
+  clipStartMs: number | null;
+  clipEndMs: number | null;
 };
 
 export const CaptionedVideo: React.FC<CaptionedVideoProps> = ({

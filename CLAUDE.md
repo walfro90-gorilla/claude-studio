@@ -78,9 +78,11 @@ Inside a component, `useCurrentFrame()` drives all animation. Remotion renders e
 ## The one-command path
 
 ```
-npm run short -- <audio-or-video> [out.mp4]     # default output: out/short.mp4
+npm run short -- <audio-or-video> [out.mp4] [--from=12] [--to=1:30]
 node scripts/short.mts --check                  # routing self-check, no API call, no render
 ```
+
+Output defaults to `out/short.mp4`.
 
 `scripts/short.mts` copies the input into `public/` if it is not already there (compositions can only read from `public/`), transcribes it, writes `public/captions.json`, and shells out to `remotion render` with the right props. Routing lives in `scripts/lib/short.mts`: a video extension becomes `videoSrc` and brings its own audio, anything else becomes `audioSrc` over black.
 
@@ -104,6 +106,19 @@ The one non-obvious detail, and the reason the mapping isn't a plain field renam
 `COMBINE_TOKENS_WITHIN_MS` in `CaptionedVideo.tsx` behaves as a *minimum page duration*, not a gap threshold — a page only breaks once it already spans that long. Lower it for faster cuts. It ignores silence, so a long pause mid-page does not force a break.
 
 `public/sample.mp3` is a 20-second English news clip kept as a fixture, and `public/captions.json` holds its real transcript, so the composition renders out of the box. `npm run transcribe` overwrites the JSON — copy it aside first if it still matters.
+
+## Trimming the ends
+
+`--from` and `--to` set manual in/out points, in seconds or `mm:ss` / `hh:mm:ss`:
+
+```
+npm run short -- clip.mp4 out.mp4 --from=12 --to=1:30
+npm run render -- Captions out/v.mp4 --props='{"videoSrc":"clip.mp4","clipStartMs":12000,"clipEndMs":90000}'
+```
+
+The window is applied *before* the silence cut, so both compose: the window picks the take, the silence cut tightens what is inside it.
+
+Only words spoken **whole** inside the window survive. A word straddling an edge is dropped rather than clipped — keeping one cuts its audio mid-syllable, and at the in-point its caption shifts to a negative time and is never drawn (that bug shipped once; the `--check` now asserts against it). Expect the output to start on the first complete word after `--from`, not exactly at it.
 
 ## Cutting the silence
 

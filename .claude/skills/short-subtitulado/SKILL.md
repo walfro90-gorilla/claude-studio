@@ -12,8 +12,10 @@ Audio or video in, rendered `.mp4` out.
 When the caption settings are already right for this kind of material:
 
 ```
-npm run short -- <audio-or-video> [out.mp4]
+npm run short -- <audio-or-video> [out.mp4] [--from=12] [--to=1:30]
 ```
+
+`--from` / `--to` pick the take out of a longer recording; both accept seconds, `mm:ss` or `hh:mm:ss`. Only words spoken whole inside the window are kept, so the output starts on the first complete word after `--from` rather than exactly at it.
 
 One command: copies the file into `public/`, transcribes it, cuts the silences, renders. A video input goes behind the captions and keeps its own audio; anything else plays over black.
 

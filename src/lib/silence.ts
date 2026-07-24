@@ -20,6 +20,10 @@ export type TrimSilenceInput = {
   maxGapMs: number | null;
   /** Breathing room kept on each side of a cut, so consonants are not clipped. */
   padMs: number;
+  /** Manual in-point into the source, in ms. `null` starts at the beginning. */
+  clipStartMs?: number | null;
+  /** Manual out-point into the source, in ms. `null` runs to the end. */
+  clipEndMs?: number | null;
 };
 
 export type TrimSilenceOutput = {
@@ -66,21 +70,36 @@ const pad = (
   });
 
 export const trimSilence = ({
-  captions,
+  captions: allCaptions,
   fps,
   maxGapMs,
   padMs,
+  clipStartMs = null,
+  clipEndMs = null,
 }: TrimSilenceInput): TrimSilenceOutput => {
+  // Only words spoken WHOLE inside the window survive it. Keeping a word that
+  // straddles an edge would clip its audio mid-syllable and, at the in-point,
+  // shift its caption to a negative time — it would never be drawn.
+  const from = clipStartMs ?? 0;
+  const to = clipEndMs ?? Infinity;
+  const captions = allCaptions.filter(
+    (c) => c.startMs >= from && c.endMs <= to,
+  );
+
   if (captions.length === 0) {
     return { segments: [], captions: [], durationInFrames: 0 };
   }
 
   const msToFrames = (ms: number) => Math.round((ms / 1000) * fps);
   const lastMs = captions[captions.length - 1].endMs;
-  const kept =
+  const kept = (
     maxGapMs === null
-      ? [{ startMs: 0, endMs: lastMs + padMs }]
-      : pad(spans(captions, maxGapMs), padMs);
+      ? [{ startMs: from, endMs: clipEndMs ?? lastMs + padMs }]
+      : pad(spans(captions, maxGapMs), padMs)
+  ).map((span) => ({
+    startMs: Math.max(from, span.startMs),
+    endMs: Math.min(to, span.endMs),
+  }));
 
   const segments: Segment[] = [];
   const shifted: Caption[] = [];

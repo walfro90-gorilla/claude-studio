@@ -28,6 +28,8 @@ const calculateMetadata: CalculateMetadataFunction<
     fps: FPS,
     maxGapMs: TRIM_SILENCE_OVER_MS,
     padMs: PAD_MS,
+    clipStartMs: props.clipStartMs,
+    clipEndMs: props.clipEndMs,
   });
 
   return {
@@ -54,6 +56,8 @@ export const Captions = () => {
         segments: [],
         videoSrc: null,
         audioSrc: null,
+        clipStartMs: null,
+        clipEndMs: null,
       }}
       calculateMetadata={calculateMetadata}
     />
