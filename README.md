@@ -27,6 +27,8 @@ npm run short -- clip.mp4 --crop=left --zoom       # reframe, and add a slow pus
 
 Every positional argument is an input; the destination is `--out=` (default `out/short.mp4`). A video input plays behind the captions cropped to 9:16; audio plays over black. Video and audio clips mix freely in one run.
 
+`.mp4 .mov .mkv .webm .avi .m4v` all work as-is — no conversion step. Audio goes in whatever AssemblyAI accepts (`.mp3`, `.wav`, `.m4a`, …).
+
 Each run prints the language it transcribed in — `49 words, detected es (99% sure)` — so a misdetection shows up there rather than in the finished video. Pin it with `--lang=es` when you already know.
 
 | Flag | Does |

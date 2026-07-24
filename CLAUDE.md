@@ -86,6 +86,8 @@ node scripts/short.mts --check                  # routing self-check, no API cal
 
 **Every positional argument is an input**, played in the order given; the destination is named with `--out=` and defaults to `out/short.mp4`. Guessing which trailing path was meant as the output is exactly the magic that transcribes the file you meant to write.
 
+No conversion step is needed for the usual containers. `.mkv` in particular goes straight through — AssemblyAI accepts the upload and Remotion's ffmpeg demuxes matroska — verified end to end on H.264 + AAC, which is what OBS and most screen recorders produce. What matters is the codec inside, not the extension; a container Chrome cannot decode would fail at render time, not at transcription.
+
 `scripts/short.mts` copies each input into `public/` if it is not already there (compositions can only read from `public/`), transcribes them one at a time, writes `public/captions.json`, and shells out to `remotion render`. Routing lives in `scripts/lib/short.mts`: a video extension plays behind the captions with its own audio, anything else plays over black.
 
 It renders by spawning the Remotion CLI rather than calling `@remotion/renderer` directly — deliberately. The Node API ignores `remotion.config.ts`, so the Tailwind webpack override would have to be re-passed by hand and silently breaks styling if forgotten.
