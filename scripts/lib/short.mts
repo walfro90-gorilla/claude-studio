@@ -5,8 +5,10 @@ import { extname } from "node:path";
 import {
   CAPTION_POSITIONS,
   CROPS,
+  DEFAULT_COLOR,
   isCaptionPosition,
   isCrop,
+  isHexColor,
   type CaptionPosition,
   type Crop,
 } from "../../src/lib/framing.ts";
@@ -39,6 +41,7 @@ export type RenderProps = {
   crop: Crop;
   zoom: boolean;
   caption: CaptionPosition;
+  color: string;
 };
 
 export type ParsedArgs = {
@@ -66,6 +69,7 @@ export const parseArgs = (argv: string[]): ParsedArgs => {
     crop: "center",
     zoom: false,
     caption: "lower",
+    color: DEFAULT_COLOR,
   };
   let out = DEFAULT_OUT;
   let languageCode: string | null = null;
@@ -75,7 +79,7 @@ export const parseArgs = (argv: string[]): ParsedArgs => {
       props.zoom = true;
       continue;
     }
-    const match = /^--(from|to|out|crop|lang|caption)=(.+)$/.exec(arg);
+    const match = /^--(from|to|out|crop|lang|caption|color)=(.+)$/.exec(arg);
     if (match === null) {
       inputs.push(arg);
       continue;
@@ -83,6 +87,11 @@ export const parseArgs = (argv: string[]): ParsedArgs => {
     const [, flag, value] = match;
     if (flag === "out") {
       out = value;
+    } else if (flag === "color") {
+      if (!isHexColor(value)) {
+        throw new Error(`bad --color: ${value} (use a hex code like #00e5ff)`);
+      }
+      props.color = value;
     } else if (flag === "lang") {
       if (!isLanguageCode(value)) {
         throw new Error(`bad --lang: ${value} (use a code like es, en, en_us)`);

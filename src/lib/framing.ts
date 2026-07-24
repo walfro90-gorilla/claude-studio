@@ -45,6 +45,17 @@ export const objectPositionFor = (crop: Crop): string =>
     bottom: "50% 100%",
   })[crop];
 
+/** The active-word colour when none is given. */
+export const DEFAULT_COLOR = "#fde047";
+
+/**
+ * Hex only (`#f00`, `#ff0000`, `#ff0000aa`). Named CSS colours would need the
+ * browser's full list to validate; hex covers brand colours and fails a typo
+ * before it costs a render.
+ */
+export const isHexColor = (value: string): boolean =>
+  /^#([0-9a-f]{3}|[0-9a-f]{6}|[0-9a-f]{8})$/i.test(value);
+
 /** How much a Ken Burns push grows the frame over the whole video. */
 export const ZOOM_TO = 1.12;
 

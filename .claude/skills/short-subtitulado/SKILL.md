@@ -13,7 +13,7 @@ When the caption settings are already right for this kind of material:
 
 ```
 npm run short -- <file> [more files...] [--out=x.mp4] [--from=12] [--to=1:30]
-                   [--crop=left] [--zoom] [--lang=es] [--caption=lower]
+                   [--crop=left] [--zoom] [--lang=es] [--caption=lower] [--color=#00e5ff]
 ```
 
 Every positional argument is an input, played in the order given — several files become one short, and video and audio clips can mix. The destination is `--out=`, defaulting to `out/short.mp4`.

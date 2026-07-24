@@ -80,7 +80,7 @@ Inside a component, `useCurrentFrame()` drives all animation. Remotion renders e
 
 ```
 npm run short -- <file> [more files...] [--out=x.mp4] [--from=12] [--to=1:30]
-                   [--crop=left] [--zoom] [--lang=es] [--caption=lower]
+                   [--crop=left] [--zoom] [--lang=es] [--caption=lower] [--color=#00e5ff]
 node scripts/short.mts --check                  # routing self-check, no API call, no render
 ```
 

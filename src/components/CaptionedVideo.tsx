@@ -48,6 +48,8 @@ export type CaptionedVideoProps = {
   zoom: boolean;
   /** Where the caption block sits vertically. */
   caption: CaptionPosition;
+  /** Colour of the currently-spoken word. Any CSS colour. */
+  color: string;
 };
 
 export const CaptionedVideo: React.FC<CaptionedVideoProps> = ({
@@ -56,6 +58,7 @@ export const CaptionedVideo: React.FC<CaptionedVideoProps> = ({
   crop,
   zoom,
   caption,
+  color,
 }) => {
   const frame = useCurrentFrame();
   const { fps, durationInFrames } = useVideoConfig();
@@ -126,16 +129,13 @@ export const CaptionedVideo: React.FC<CaptionedVideoProps> = ({
           {page.tokens.map((token, i) => (
             <span
               key={`${token.fromMs}-${i}`}
-              className={
-                ms >= token.fromMs && ms < token.toMs
-                  ? "text-yellow-300"
-                  : "text-white"
-              }
               style={{
                 fontFamily,
                 fontSize: 96,
                 fontWeight: 900,
                 textTransform: "uppercase",
+                // The active word takes the accent colour; the rest stay white.
+                color: ms >= token.fromMs && ms < token.toMs ? color : "white",
                 // ponytail: stroke instead of a shadow — stays legible on any footage.
                 WebkitTextStroke: "10px black",
                 paintOrder: "stroke",

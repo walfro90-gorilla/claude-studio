@@ -15,8 +15,10 @@ import { trimClips, trimSilence } from "../src/lib/silence.ts";
 import {
   CAPTION_POSITIONS,
   CROPS,
+  DEFAULT_COLOR,
   ZOOM_TO,
   captionLayoutFor,
+  isHexColor,
   objectPositionFor,
   zoomScaleAt,
 } from "../src/lib/framing.ts";
@@ -177,6 +179,18 @@ const checkClip = () => {
   if (parseArgs(["a.mp4"]).props.caption !== "lower") {
     throw new Error("captions must default to the lower third");
   }
+
+  const colored = parseArgs(["a.mp4", "--color=#00e5ff"]);
+  if (colored.props.color !== "#00e5ff") throw new Error("--color must reach the props");
+  if (parseArgs(["a.mp4"]).props.color !== DEFAULT_COLOR) {
+    throw new Error("the highlight must default to the brand yellow");
+  }
+  for (const good of ["#f00", "#ff0000", "#ff0000aa", "#ABCDEF"]) {
+    if (!isHexColor(good)) throw new Error(`${good} is a valid hex colour`);
+  }
+  for (const bad of ["red", "#gggggg", "ff0000", "#ff00", ""]) {
+    if (isHexColor(bad)) throw new Error(`${JSON.stringify(bad)} is not a hex colour`);
+  }
   if (framed.languageCode !== null) {
     throw new Error("no --lang must mean detection, not a guessed default");
   }
@@ -200,6 +214,7 @@ const checkClip = () => {
     [["a.mp4", "--crop=sideways"], "an unknown crop"],
     [["a.mp4", "--lang=espanol"], "a language name instead of a code"],
     [["a.mp4", "--caption=middle"], "an unknown caption position"],
+    [["a.mp4", "--color=red"], "a named colour instead of hex"],
   ] as const) {
     let threw = false;
     try {
@@ -462,7 +477,7 @@ const main = async () => {
     throw new Error(
       "usage: npm run short -- <file> [more files...]\n" +
         "         [--out=x.mp4] [--from=12] [--to=1:30]\n" +
-        "         [--crop=left] [--zoom] [--lang=es] [--caption=lower]\n" +
+        "         [--crop=left] [--zoom] [--lang=es] [--caption=lower] [--color=#00e5ff]\n" +
         "       (needs ASSEMBLYAI_API_KEY in .env)",
     );
   }

@@ -59,6 +59,7 @@ export const Captions = () => {
         crop: "center" as const,
         zoom: false,
         caption: "lower" as const,
+        color: "#fde047",
       }}
       calculateMetadata={calculateMetadata}
     />
