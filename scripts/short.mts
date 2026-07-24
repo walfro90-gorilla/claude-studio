@@ -10,6 +10,12 @@ import { clipForInput, isVideo, parseArgs, parseTime } from "./lib/short.mts";
 // Crossing into src/ is safe here and only here: silence.ts is pure, imports
 // nothing but a type, and touches neither the DOM nor the filesystem.
 import { trimClips, trimSilence } from "../src/lib/silence.ts";
+import {
+  CROPS,
+  ZOOM_TO,
+  objectPositionFor,
+  zoomScaleAt,
+} from "../src/lib/framing.ts";
 
 const PUBLIC_DIR = resolve("public");
 const CAPTIONS_OUT = resolve(PUBLIC_DIR, "captions.json");
@@ -111,8 +117,11 @@ const checkClip = () => {
     throw new Error("flags must be stripped, leaving only the inputs");
   }
   if (parsed.out !== "v.mp4") throw new Error("--out must set the destination");
-  if (parsed.window.clipStartMs !== 90_000 || parsed.window.clipEndMs !== 100_000) {
+  if (parsed.props.clipStartMs !== 90_000 || parsed.props.clipEndMs !== 100_000) {
     throw new Error("--from/--to must land in the window");
+  }
+  if (parsed.props.crop !== "center" || parsed.props.zoom) {
+    throw new Error("framing must default to a centred crop and no zoom");
   }
 
   // Several inputs are several clips, in the order they were given.
@@ -122,9 +131,18 @@ const checkClip = () => {
   }
   if (many.out !== "out/short.mp4") throw new Error("--out must have a default");
 
+  const framed = parseArgs(["a.mp4", "--crop=left", "--zoom"]);
+  if (framed.props.crop !== "left" || !framed.props.zoom) {
+    throw new Error("--crop/--zoom must reach the props");
+  }
+  if (framed.inputs.join() !== "a.mp4") {
+    throw new Error("--zoom takes no value and must not be read as an input");
+  }
+
   for (const [argv, why] of [
     [["--from=30", "--to=10"], "--to before --from"],
     [["a.mp4", "b.mp4", "--from=5"], "a window across several inputs"],
+    [["a.mp4", "--crop=sideways"], "an unknown crop"],
   ] as const) {
     let threw = false;
     try {
@@ -134,6 +152,8 @@ const checkClip = () => {
     }
     if (!threw) throw new Error(`${why} must be rejected`);
   }
+
+  checkFraming();
 
   // A word straddling either edge is dropped whole: keeping it would clip its
   // audio mid-syllable, and at the in-point its caption would shift to a
@@ -218,6 +238,43 @@ const checkClip = () => {
 };
 
 const msToFrames = (ms: number, fps: number) => Math.round((ms / 1000) * fps);
+
+const checkFraming = () => {
+  if (objectPositionFor("center") !== "50% 50%") throw new Error("centre crop");
+  if (objectPositionFor("left") !== "0% 50%") throw new Error("left crop");
+  if (objectPositionFor("right") !== "100% 50%") throw new Error("right crop");
+  // Every crop must produce a position, or the style silently comes out undefined.
+  for (const crop of CROPS) {
+    if (!/^\d+% \d+%$/.test(objectPositionFor(crop))) {
+      throw new Error(`crop ${crop} produced ${objectPositionFor(crop)}`);
+    }
+  }
+
+  const last = 300;
+  if (zoomScaleAt(0, last, true) !== 1) {
+    throw new Error("the push must start at the source's own scale");
+  }
+  if (Math.abs(zoomScaleAt(last - 1, last, true) - ZOOM_TO) > 1e-9) {
+    throw new Error("the push must reach ZOOM_TO exactly on the last frame");
+  }
+  // Monotonic, or the shot would drift backwards mid-video.
+  let previous = 0;
+  for (let f = 0; f < last; f++) {
+    const scale = zoomScaleAt(f, last, true);
+    if (scale < previous) throw new Error(`the push reversed at frame ${f}`);
+    if (scale < 1) throw new Error(`scale below 1 would letterbox at frame ${f}`);
+    previous = scale;
+  }
+  // Past the end (a still rendered beyond the range) must not keep growing.
+  if (zoomScaleAt(last * 2, last, true) !== ZOOM_TO) {
+    throw new Error("the push must clamp at the end rather than run away");
+  }
+  if (zoomScaleAt(150, last, false) !== 1) {
+    throw new Error("no zoom must mean no transform at all");
+  }
+  // A one-frame video would divide by zero.
+  if (zoomScaleAt(0, 1, true) !== 1) throw new Error("a single frame must not blow up");
+};
 
 const checkConcat = () => {
   const fps = 30;
@@ -315,12 +372,13 @@ const main = async () => {
   if (process.argv[2] === "--check") {
     return check();
   }
-  const { inputs, out, window } = parseArgs(process.argv.slice(2));
+  const { inputs, out, props: renderProps } = parseArgs(process.argv.slice(2));
 
   const apiKey = process.env.ASSEMBLYAI_API_KEY;
   if (inputs.length === 0 || !apiKey) {
     throw new Error(
-      "usage: npm run short -- <file> [more files...] [--out=x.mp4] [--from=12] [--to=1:30]\n" +
+      "usage: npm run short -- <file> [more files...]\n" +
+        "         [--out=x.mp4] [--from=12] [--to=1:30] [--crop=left] [--zoom]\n" +
         "       (needs ASSEMBLYAI_API_KEY in .env)",
     );
   }
@@ -345,7 +403,7 @@ const main = async () => {
   writeFileSync(CAPTIONS_OUT, JSON.stringify({ clips }, null, 2));
   console.log(`${clips.length} clip(s) -> public/captions.json`);
 
-  const props = JSON.stringify(window);
+  const props = JSON.stringify(renderProps);
   console.log(`rendering ${out}${names.some(isVideo) ? " (video behind captions — this takes minutes)" : ""}`);
   const render = spawnSync(
     "npx",

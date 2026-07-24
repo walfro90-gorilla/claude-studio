@@ -1,6 +1,8 @@
 // Input routing for the one-command short pipeline. Pure: takes names,
 // returns what the composition should be handed.
 import { extname } from "node:path";
+// Crossing into src/ is safe here: framing.ts is pure and touches no DOM.
+import { CROPS, isCrop, type Crop } from "../../src/lib/framing.ts";
 
 const VIDEO_EXTENSIONS = [".mp4", ".mov", ".mkv", ".webm", ".avi", ".m4v"];
 
@@ -23,13 +25,19 @@ export const parseTime = (value: string): number => {
   return Math.round(seconds * 1000);
 };
 
-export type ClipWindow = { clipStartMs: number | null; clipEndMs: number | null };
+export type RenderProps = {
+  clipStartMs: number | null;
+  clipEndMs: number | null;
+  crop: Crop;
+  zoom: boolean;
+};
 
 export type ParsedArgs = {
   /** Input files, in the order they should play. */
   inputs: string[];
   out: string;
-  window: ClipWindow;
+  /** Passed straight through to the composition as --props. */
+  props: RenderProps;
 };
 
 const DEFAULT_OUT = "out/short.mp4";
@@ -41,31 +49,43 @@ const DEFAULT_OUT = "out/short.mp4";
  */
 export const parseArgs = (argv: string[]): ParsedArgs => {
   const inputs: string[] = [];
-  const window: ClipWindow = { clipStartMs: null, clipEndMs: null };
+  const props: RenderProps = {
+    clipStartMs: null,
+    clipEndMs: null,
+    crop: "center",
+    zoom: false,
+  };
   let out = DEFAULT_OUT;
 
   for (const arg of argv) {
-    const match = /^--(from|to|out)=(.+)$/.exec(arg);
+    if (arg === "--zoom") {
+      props.zoom = true;
+      continue;
+    }
+    const match = /^--(from|to|out|crop)=(.+)$/.exec(arg);
     if (match === null) {
       inputs.push(arg);
       continue;
     }
-    if (match[1] === "out") {
-      out = match[2];
-      continue;
-    }
-    const ms = parseTime(match[2]);
-    if (match[1] === "from") {
-      window.clipStartMs = ms;
+    const [, flag, value] = match;
+    if (flag === "out") {
+      out = value;
+    } else if (flag === "crop") {
+      if (!isCrop(value)) {
+        throw new Error(`bad --crop: ${value} (use ${CROPS.join(", ")})`);
+      }
+      props.crop = value;
+    } else if (flag === "from") {
+      props.clipStartMs = parseTime(value);
     } else {
-      window.clipEndMs = ms;
+      props.clipEndMs = parseTime(value);
     }
   }
 
   if (
-    window.clipStartMs !== null &&
-    window.clipEndMs !== null &&
-    window.clipEndMs <= window.clipStartMs
+    props.clipStartMs !== null &&
+    props.clipEndMs !== null &&
+    props.clipEndMs <= props.clipStartMs
   ) {
     throw new Error("--to must come after --from");
   }
@@ -73,9 +93,9 @@ export const parseArgs = (argv: string[]): ParsedArgs => {
   // mean something different from what anyone expects.
   if (
     inputs.length > 1 &&
-    (window.clipStartMs !== null || window.clipEndMs !== null)
+    (props.clipStartMs !== null || props.clipEndMs !== null)
   ) {
     throw new Error("--from/--to work on a single input; trim the clips first");
   }
-  return { inputs, out, window };
+  return { inputs, out, props };
 };

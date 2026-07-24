@@ -12,7 +12,7 @@ Audio or video in, rendered `.mp4` out.
 When the caption settings are already right for this kind of material:
 
 ```
-npm run short -- <file> [more files...] [--out=x.mp4] [--from=12] [--to=1:30]
+npm run short -- <file> [more files...] [--out=x.mp4] [--from=12] [--to=1:30] [--crop=left] [--zoom]
 ```
 
 Every positional argument is an input, played in the order given — several files become one short, and video and audio clips can mix. The destination is `--out=`, defaulting to `out/short.mp4`.
@@ -77,6 +77,13 @@ For a quick sanity pass first: `npm run render -- Captions out/test.mp4 --frames
 The sources live in `public/captions.json`, written by the transcribe step, so **no `--props` are needed** — `npm run render -- Captions out/short.mp4` picks up whatever was last transcribed. A video input plays behind the captions cropped to 9:16 around its centre and keeps its own audio; anything else plays over black.
 
 A video-backed render is much slower than one on black (minutes, not seconds). Tune the pacing on stills first, render the video once at the end.
+
+## Framing
+
+- `--crop=` — `center` (default), `left`, `right`, `top`, `bottom`. Horizontal footage is cropped to 9:16, and this picks which part survives. If the speaker sits off to one side, this is the fix; a still is the only way to tell.
+- `--zoom` — slow push across the whole video, so a locked-off shot does not read as a still frame.
+
+Both are visual: render a still and look at it rather than reasoning about which side the subject is on.
 
 ## Notes
 

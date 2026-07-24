@@ -11,6 +11,7 @@ import {
 import { createTikTokStyleCaptions, type Caption } from "@remotion/captions";
 import { loadFont } from "@remotion/google-fonts/Montserrat";
 import type { Segment } from "../lib/silence";
+import { objectPositionFor, zoomScaleAt, type Crop } from "../lib/framing";
 
 // Pinned so the render does not depend on whatever font the rendering machine
 // happens to have. Remotion blocks the render until the font is ready, so the
@@ -35,15 +36,31 @@ export type CaptionedVideoProps = {
   /** Manual in/out points into the source, in ms. Consumed by calculateMetadata. */
   clipStartMs: number | null;
   clipEndMs: number | null;
+  /** Which part of a wider source survives the crop to 9:16. */
+  crop: Crop;
+  /** Slow Ken Burns push across the whole video. */
+  zoom: boolean;
 };
 
 export const CaptionedVideo: React.FC<CaptionedVideoProps> = ({
   captions,
   segments,
+  crop,
+  zoom,
 }) => {
   const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
+  const { fps, durationInFrames } = useVideoConfig();
   const ms = (frame / fps) * 1000;
+
+  // Computed here, where the frame is ABSOLUTE. Inside a Series.Sequence it
+  // restarts from zero, so the push would snap back on every silence cut.
+  const videoStyle = {
+    width: "100%",
+    height: "100%",
+    objectFit: "cover",
+    objectPosition: objectPositionFor(crop),
+    transform: `scale(${zoomScaleAt(frame, durationInFrames, zoom)})`,
+  } as const;
 
   const { pages } = useMemo(
     () =>
@@ -74,9 +91,9 @@ export const CaptionedVideo: React.FC<CaptionedVideoProps> = ({
                 src={staticFile(segment.src)}
                 trimBefore={segment.trimBefore}
                 trimAfter={segment.trimAfter}
-                // Crops horizontal footage to 9:16 around its centre instead of
-                // letterboxing it. Reframe in the editor if the subject is off-centre.
-                style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                // objectFit: cover crops horizontal footage to 9:16 rather than
+                // letterboxing it; `crop` picks which part survives.
+                style={videoStyle}
               />
             ) : (
               <Audio

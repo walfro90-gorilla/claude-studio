@@ -40,6 +40,7 @@ src/                    # video code only — bundled into the render
   index.css             # Tailwind entry
   compositions/         # one file per video = one <Composition> declaration
   components/           # reusable pieces shared across compositions
+  lib/                  # pure logic — the cut and the framing; scripts/ imports it too
 scripts/                # console tools, run directly by Node — never bundled
   lib/                  # domain logic: no argv, no console, no process.exit
   transcribe.mts        # thin CLI shell over lib/
@@ -52,7 +53,7 @@ Tracked vs ignored: `.claude/skills/` is committed (shared workflows) while `.cl
 
 Two boundaries carry the design:
 
-**`src` vs `scripts`** — `src` runs inside headless Chrome under Remotion's bundler; `scripts` runs in plain Node with filesystem and network access. Transcription, file IO, and API calls belong in `scripts` and hand results to `src` through `public/`. Do not import across that line.
+**`src` vs `scripts`** — `src` runs inside headless Chrome under Remotion's bundler; `scripts` runs in plain Node with filesystem and network access. Transcription, file IO, and API calls belong in `scripts` and hand results to `src` through `public/`. Do not import across that line, with one deliberate exception: `scripts` imports `src/lib/*`, which is pure and DOM-free, so the CLI and the composition cannot disagree about the cut or the framing. Nothing else in `src` may be imported from `scripts`.
 
 **`scripts/lib` vs `scripts/*.mts`** — `lib/` holds pure domain functions that take arguments and return values. The `.mts` files at the top of `scripts/` are shells: parse argv, read env, write files, print. This split exists so the same functions can back an HTTP handler later without being untangled from CLI plumbing. Keep new logic in `lib/`; a shell should stay short enough to read at a glance.
 
@@ -78,7 +79,7 @@ Inside a component, `useCurrentFrame()` drives all animation. Remotion renders e
 ## The one-command path
 
 ```
-npm run short -- <file> [more files...] [--out=x.mp4] [--from=12] [--to=1:30]
+npm run short -- <file> [more files...] [--out=x.mp4] [--from=12] [--to=1:30] [--crop=left] [--zoom]
 node scripts/short.mts --check                  # routing self-check, no API call, no render
 ```
 
@@ -142,9 +143,19 @@ Several inputs become one short. Each clip is transcribed on its own and keeps i
 
 `--from`/`--to` are rejected with several inputs: a window into *which* recording has no honest answer. Trim the clips first.
 
-## Footage behind the captions
+## Framing and movement
 
-Footage is rendered through `<OffthreadVideo>` with `objectFit: cover`, which crops horizontal material to 9:16 around its centre rather than letterboxing it. Audio-only clips play over black.
+Footage is rendered through `<OffthreadVideo>` with `objectFit: cover`, which crops horizontal material to 9:16 rather than letterboxing it. Audio-only clips play over black. `src/lib/framing.ts` holds both knobs, as pure functions so the CLI can validate a flag without importing anything DOM-shaped:
+
+```
+npm run short -- clip.mp4 --crop=left --zoom
+npm run render -- Captions out/v.mp4 --props='{"crop":"right","zoom":true}'
+```
+
+- `--crop=` — `center` (default), `left`, `right`, `top`, `bottom`. Picks which part of a wider source survives, via `objectPosition`. An unknown value is rejected at parse time rather than silently producing `undefined` in the style.
+- `--zoom` — a slow Ken Burns push to `ZOOM_TO` (1.12) across the whole video.
+
+The zoom's one trap: it is driven by the **absolute** frame, computed in `CaptionedVideo` rather than inside the `<Series.Sequence>`. Inside a sequence the frame restarts at zero, so the push would snap back to 1.0 on every silence cut. Anything else animated across the whole video has to be computed in the same place, for the same reason.
 
 Two layout facts that are easy to get wrong and invisible until a frame is rendered — both cost a render to find:
 
