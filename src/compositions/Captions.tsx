@@ -14,6 +14,8 @@ const CAPTIONS_FILE = "captions.json";
 const TRIM_SILENCE_OVER_MS: number | null = 700;
 // Breathing room kept around every cut so consonants are not clipped.
 const PAD_MS = 150;
+// How long the hook card holds before the video, when --hook is given.
+const HOOK_SECONDS = 2;
 
 // Loads the captions written by the transcribe step, drops the dead air, and
 // sizes the video to what is left — so a new transcript changes the cut and
@@ -32,13 +34,18 @@ const calculateMetadata: CalculateMetadataFunction<
     clipEndMs: props.clipEndMs,
   });
 
+  // Computed once here and passed down, so the component never has to re-derive
+  // it and the two can never disagree about where the content starts.
+  const hookFrames = props.hook ? Math.round(HOOK_SECONDS * FPS) : 0;
+
   return {
     props: {
       ...props,
       captions: trimmed.captions,
       segments: trimmed.segments,
+      hookFrames,
     },
-    durationInFrames: Math.max(1, trimmed.durationInFrames),
+    durationInFrames: Math.max(1, trimmed.durationInFrames + hookFrames),
   };
 };
 
@@ -62,6 +69,8 @@ export const Captions = () => {
         color: "#fde047",
         fit: false,
         musicSrc: null,
+        hook: null,
+        hookFrames: 0,
       }}
       calculateMetadata={calculateMetadata}
     />

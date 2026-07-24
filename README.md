@@ -42,6 +42,7 @@ Each run prints the language it transcribed in — `49 words, detected es (99% s
 | `--color=` | Highlight colour of the spoken word, hex (default `#fde047`). |
 | `--fit` | Fit the whole frame with bars instead of cropping to 9:16. For screen recordings. |
 | `--music=` | Background track, ducked under speech. Any audio file. |
+| `--hook=` | Text held on a card for 2s before the video, in the accent colour. |
 
 Expect the output to be shorter than the input: pauses over 700ms are cut. Video-backed renders take minutes, audio-over-black takes seconds.
 

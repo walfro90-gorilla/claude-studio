@@ -239,6 +239,14 @@ const checkClip = () => {
   if (parseArgs(["a.mp4"]).music !== null) {
     throw new Error("no --music must mean no music");
   }
+
+  // --hook text reaches the props verbatim (spaces and all); none means null.
+  if (parseArgs(["a.mp4", "--hook=Mira esto"]).props.hook !== "Mira esto") {
+    throw new Error("--hook text must reach the props verbatim");
+  }
+  if (parseArgs(["a.mp4"]).props.hook !== null) {
+    throw new Error("no --hook must mean no card");
+  }
   if (framed.inputs.join() !== "a.mp4") {
     throw new Error("valueless flags must not be read as inputs");
   }
@@ -551,7 +559,7 @@ const main = async () => {
   if (inputs.length === 0 || !apiKey) {
     throw new Error(
       "usage: npm run short -- <file> [more files...]\n" +
-        "         [--out=x.mp4] [--from=12] [--to=1:30] [--music=song.mp3]\n" +
+        "         [--out=x.mp4] [--from=12] [--to=1:30] [--music=song.mp3] [--hook=\"MIRA ESTO\"]\n" +
         "         [--crop=left] [--zoom] [--fit] [--lang=es] [--caption=lower] [--color=#00e5ff]\n" +
         "       (needs ASSEMBLYAI_API_KEY in .env)",
     );

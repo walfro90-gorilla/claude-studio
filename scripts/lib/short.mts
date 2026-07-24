@@ -45,6 +45,10 @@ export type RenderProps = {
   fit: boolean;
   /** Music filename inside public/. Filled by main after copying the file in. */
   musicSrc: string | null;
+  /** Hook-card text shown before the video; null for none. */
+  hook: string | null;
+  /** Filled by calculateMetadata; a placeholder here. */
+  hookFrames: number;
 };
 
 export type ParsedArgs = {
@@ -77,6 +81,8 @@ export const parseArgs = (argv: string[]): ParsedArgs => {
     color: DEFAULT_COLOR,
     fit: false,
     musicSrc: null,
+    hook: null,
+    hookFrames: 0,
   };
   let out = DEFAULT_OUT;
   let languageCode: string | null = null;
@@ -91,7 +97,8 @@ export const parseArgs = (argv: string[]): ParsedArgs => {
       props.fit = true;
       continue;
     }
-    const match = /^--(from|to|out|crop|lang|caption|color|music)=(.+)$/.exec(arg);
+    const match =
+      /^--(from|to|out|crop|lang|caption|color|music|hook)=(.+)$/.exec(arg);
     if (match === null) {
       inputs.push(arg);
       continue;
@@ -99,6 +106,8 @@ export const parseArgs = (argv: string[]): ParsedArgs => {
     const [, flag, value] = match;
     if (flag === "out") {
       out = value;
+    } else if (flag === "hook") {
+      props.hook = value;
     } else if (flag === "music") {
       music = value;
     } else if (flag === "color") {

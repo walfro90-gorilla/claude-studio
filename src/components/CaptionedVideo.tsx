@@ -3,6 +3,7 @@ import {
   AbsoluteFill,
   Audio,
   OffthreadVideo,
+  Sequence,
   Series,
   staticFile,
   useCurrentFrame,
@@ -55,9 +56,21 @@ export type CaptionedVideoProps = {
   fit: boolean;
   /** Background music filename in public/, ducked under speech. null for none. */
   musicSrc: string | null;
+  /** Hook-card text held before the video; null for none. */
+  hook: string | null;
+  /** How many frames the hook card holds. 0 when there is no hook. */
+  hookFrames: number;
 };
 
-export const CaptionedVideo: React.FC<CaptionedVideoProps> = ({
+// The video, captions and music. Split out so it can live inside a Sequence
+// that starts after the hook card, which rebases useCurrentFrame to 0 for it —
+// captions and music then time against the content, not the hook.
+type ContentProps = Omit<CaptionedVideoProps, "hook" | "hookFrames"> & {
+  /** The content's own length, for the zoom span (excludes the hook). */
+  durationInFrames: number;
+};
+
+const CaptionedContent: React.FC<ContentProps> = ({
   captions,
   segments,
   crop,
@@ -66,13 +79,15 @@ export const CaptionedVideo: React.FC<CaptionedVideoProps> = ({
   color,
   fit,
   musicSrc,
+  durationInFrames,
 }) => {
   const frame = useCurrentFrame();
-  const { fps, durationInFrames } = useVideoConfig();
+  const { fps } = useVideoConfig();
   const ms = (frame / fps) * 1000;
 
-  // Computed here, where the frame is ABSOLUTE. Inside a Series.Sequence it
-  // restarts from zero, so the push would snap back on every silence cut.
+  // Computed here, where the frame is ABSOLUTE within the content. Inside a
+  // Series.Sequence it restarts from zero, so the push would snap back on
+  // every silence cut.
   const videoStyle = {
     width: "100%",
     height: "100%",
@@ -170,6 +185,55 @@ export const CaptionedVideo: React.FC<CaptionedVideoProps> = ({
           ))}
         </AbsoluteFill>
       )}
+    </AbsoluteFill>
+  );
+};
+
+// A full-screen title card on black, shown for hookFrames before the video.
+const HookCard: React.FC<{ text: string; color: string }> = ({
+  text,
+  color,
+}) => (
+  <AbsoluteFill className="items-center justify-center bg-black px-24 text-center">
+    <div
+      style={{
+        fontFamily,
+        fontSize: 128,
+        fontWeight: 900,
+        lineHeight: 1.05,
+        textTransform: "uppercase",
+        color,
+        WebkitTextStroke: "12px black",
+        paintOrder: "stroke",
+      }}
+    >
+      {text}
+    </div>
+  </AbsoluteFill>
+);
+
+export const CaptionedVideo: React.FC<CaptionedVideoProps> = ({
+  hook,
+  hookFrames,
+  ...content
+}) => {
+  const { durationInFrames } = useVideoConfig();
+
+  return (
+    <AbsoluteFill className="bg-black">
+      {hook === null ? null : (
+        <Sequence durationInFrames={hookFrames}>
+          <HookCard text={hook} color={content.color} />
+        </Sequence>
+      )}
+      {/* Everything else starts after the hook. from={hookFrames} rebases the
+          children's frame to 0, so captions and music stay content-relative. */}
+      <Sequence from={hookFrames}>
+        <CaptionedContent
+          {...content}
+          durationInFrames={durationInFrames - hookFrames}
+        />
+      </Sequence>
     </AbsoluteFill>
   );
 };

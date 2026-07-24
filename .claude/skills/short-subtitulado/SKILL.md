@@ -12,7 +12,7 @@ Audio or video in, rendered `.mp4` out.
 When the caption settings are already right for this kind of material:
 
 ```
-npm run short -- <file> [more files...] [--out=x.mp4] [--from=12] [--to=1:30] [--music=song.mp3]
+npm run short -- <file> [more files...] [--out=x.mp4] [--from=12] [--to=1:30] [--music=song.mp3] [--hook="MIRA ESTO"]
                    [--crop=left] [--zoom] [--fit] [--lang=es] [--caption=lower] [--color=#00e5ff]
 ```
 
@@ -95,6 +95,10 @@ All three are visual: render a still and look at it rather than reasoning about 
 ## Music
 
 `--music=song.mp3` adds a background track that ducks under the voice automatically (down while words play, up in the gaps) and loops to cover the whole video. A still cannot show this — check it by playing the render, or leave it off for screen-recording commentary where music over the voice just competes.
+
+## Hook card
+
+`--hook="MIRA ESTO"` opens the short with a 2-second title card in the accent colour, before the video. It lengthens the output by 2s and keeps the captions timed to the video, not the card. Keep the text short — it renders big and wraps; four or five words is the ceiling before it looks cramped. Quote it in the shell so the spaces survive.
 
 ## Notes
 

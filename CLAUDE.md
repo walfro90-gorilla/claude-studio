@@ -79,7 +79,7 @@ Inside a component, `useCurrentFrame()` drives all animation. Remotion renders e
 ## The one-command path
 
 ```
-npm run short -- <file> [more files...] [--out=x.mp4] [--from=12] [--to=1:30] [--music=song.mp3]
+npm run short -- <file> [more files...] [--out=x.mp4] [--from=12] [--to=1:30] [--music=song.mp3] [--hook="MIRA ESTO"]
                    [--crop=left] [--zoom] [--fit] [--lang=es] [--caption=lower] [--color=#00e5ff]
 node scripts/short.mts --check                  # routing self-check, no API call, no render
 ```
@@ -200,6 +200,12 @@ ffmpeg -f lavfi -i "testsrc2=size=1920x1080:rate=30:duration=22" -c:v libx264 -p
 There is no agent binary in this repo, deliberately. Claude Code is the agent: it reads this file, runs the npm scripts, and edits compositions. Repeatable workflows are captured as skills in `.claude/skills/` rather than as code — `short-subtitulado` covers the audio → transcript → tuned render path end to end.
 
 A standalone `scripts/agent.mts` on the Anthropic SDK was considered and deferred. It buys headless operation (CI, cron, someone else running it) and nothing else right now; the `lib/` split above is what makes it a short job when that need is real. Do not build it speculatively.
+
+## Hook card
+
+`--hook="MIRA ESTO"` holds a full-screen title card for 2 seconds (`HOOK_SECONDS` in `Captions.tsx`) before the video, in the accent `--color`. `calculateMetadata` adds `hookFrames` to `durationInFrames` and passes the count down, so the composition and the component never disagree about where the content begins.
+
+The structural point: the card is a `<Sequence durationInFrames={hookFrames}>` and everything else lives in a sibling `<Sequence from={hookFrames}>`. That second `from` rebases `useCurrentFrame` to 0 for the content, so the captions and the ducking still time against the video rather than the hook. The content was split into an inner `CaptionedContent` for exactly this — and its zoom span is passed in as `durationInFrames - hookFrames`, since `useVideoConfig` would otherwise report the whole length including the card.
 
 ## Background music that ducks
 
