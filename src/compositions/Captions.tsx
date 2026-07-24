@@ -71,6 +71,8 @@ export const Captions = () => {
         musicSrc: null,
         hook: null,
         hookFrames: 0,
+        handle: null,
+        overlays: {},
       }}
       calculateMetadata={calculateMetadata}
     />

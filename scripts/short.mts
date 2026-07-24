@@ -8,11 +8,12 @@ import type { Caption } from "@remotion/captions";
 import { transcribeToCaptions } from "./lib/captions.mts";
 import { clipForInput, isVideo, parseArgs, parseTime } from "./lib/short.mts";
 import { applyCorrections, isLanguageCode } from "./lib/captions.mts";
-import { loadCorrections } from "./lib/corrections.mts";
+import { loadCorrections, loadOverlays } from "./lib/corrections.mts";
 // Crossing into src/ is safe here and only here: silence.ts is pure, imports
 // nothing but a type, and touches neither the DOM nor the filesystem.
 import { trimClips, trimSilence } from "../src/lib/silence.ts";
 import { musicVolumeAt } from "../src/lib/ducking.ts";
+import { overlaysFromCaptions } from "../src/lib/overlays.ts";
 import {
   CAPTION_POSITIONS,
   CROPS,
@@ -45,7 +46,43 @@ const check = () => {
   checkClip();
   checkCorrections();
   checkDucking();
+  checkOverlays();
   console.log("ok");
+};
+
+const checkOverlays = () => {
+  const caps = [
+    { text: "hola", startMs: 0, endMs: 300, timestampMs: 150, confidence: 1 },
+    { text: " Claude", startMs: 500, endMs: 650, timestampMs: 575, confidence: 1 },
+    { text: " y", startMs: 700, endMs: 800, timestampMs: 750, confidence: 1 },
+    { text: " MISTRAL.", startMs: 900, endMs: 1200, timestampMs: 1050, confidence: 1 },
+  ];
+  const map = { claude: "claude.png", mistral: "mistral.png" };
+  const got = overlaysFromCaptions(caps, map, 1300);
+
+  if (got.length !== 2) throw new Error(`two keywords must yield 2 overlays, got ${got.length}`);
+  // Matched case-insensitively, punctuation ignored ("MISTRAL." -> mistral).
+  if (got[0].src !== "claude.png" || got[1].src !== "mistral.png") {
+    throw new Error("overlays must map to the keyword's image");
+  }
+  // Appears with the word.
+  if (got[0].fromMs !== 500) throw new Error("overlay must start on the word");
+  // A short word (150ms) is held to the minimum so it does not flash.
+  if (got[0].toMs !== 500 + 1300) throw new Error("a short word must hold to the minimum");
+  // A long-enough word holds to its own end, not shortened.
+  const long = overlaysFromCaptions(
+    [{ text: "Claude", startMs: 0, endMs: 2000, timestampMs: 1000, confidence: 1 }],
+    map,
+    1300,
+  );
+  if (long[0].toMs !== 2000) throw new Error("a long word must hold to its own end");
+  // No map, no overlays; a non-match contributes nothing.
+  if (overlaysFromCaptions(caps, {}).length !== 0) {
+    throw new Error("an empty map must produce no overlays");
+  }
+  if (overlaysFromCaptions([caps[0], caps[2]], map).length !== 0) {
+    throw new Error("words with no keyword must produce no overlays");
+  }
 };
 
 const checkDucking = () => {
@@ -246,6 +283,14 @@ const checkClip = () => {
   }
   if (parseArgs(["a.mp4"]).props.hook !== null) {
     throw new Error("no --hook must mean no card");
+  }
+
+  // --handle reaches the props; none means no watermark.
+  if (parseArgs(["a.mp4", "--handle=@walfre"]).props.handle !== "@walfre") {
+    throw new Error("--handle must reach the props");
+  }
+  if (parseArgs(["a.mp4"]).props.handle !== null) {
+    throw new Error("no --handle must mean no watermark");
   }
   if (framed.inputs.join() !== "a.mp4") {
     throw new Error("valueless flags must not be read as inputs");
@@ -559,8 +604,10 @@ const main = async () => {
   if (inputs.length === 0 || !apiKey) {
     throw new Error(
       "usage: npm run short -- <file> [more files...]\n" +
-        "         [--out=x.mp4] [--from=12] [--to=1:30] [--music=song.mp3] [--hook=\"MIRA ESTO\"]\n" +
-        "         [--crop=left] [--zoom] [--fit] [--lang=es] [--caption=lower] [--color=#00e5ff]\n" +
+        "         [--out=x.mp4] [--from=12] [--to=1:30] [--music=song.mp3]\n" +
+        "         [--hook=\"MIRA ESTO\"] [--handle=@you] [--crop=left] [--zoom] [--fit]\n" +
+        "         [--lang=es] [--caption=lower] [--color=#00e5ff]\n" +
+        "       (overlays: put images in public/ and map them in overlays.json)\n" +
         "       (needs ASSEMBLYAI_API_KEY in .env)",
     );
   }
@@ -570,6 +617,9 @@ const main = async () => {
   if (music !== null) {
     renderProps.musicSrc = ensureInPublic(music);
   }
+  // Keyword overlays: the map comes from overlays.json, the images are already
+  // in public/ (the user drops them there and references them by filename).
+  renderProps.overlays = loadOverlays();
   const corrections = loadCorrections();
   const clips = [];
 

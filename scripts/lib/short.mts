@@ -49,6 +49,10 @@ export type RenderProps = {
   hook: string | null;
   /** Filled by calculateMetadata; a placeholder here. */
   hookFrames: number;
+  /** @handle watermark over the whole video; null for none. */
+  handle: string | null;
+  /** Keyword -> image filename map; filled from overlays.json by main. */
+  overlays: Record<string, string>;
 };
 
 export type ParsedArgs = {
@@ -83,6 +87,8 @@ export const parseArgs = (argv: string[]): ParsedArgs => {
     musicSrc: null,
     hook: null,
     hookFrames: 0,
+    handle: null,
+    overlays: {},
   };
   let out = DEFAULT_OUT;
   let languageCode: string | null = null;
@@ -98,7 +104,9 @@ export const parseArgs = (argv: string[]): ParsedArgs => {
       continue;
     }
     const match =
-      /^--(from|to|out|crop|lang|caption|color|music|hook)=(.+)$/.exec(arg);
+      /^--(from|to|out|crop|lang|caption|color|music|hook|handle)=(.+)$/.exec(
+        arg,
+      );
     if (match === null) {
       inputs.push(arg);
       continue;
@@ -106,6 +114,8 @@ export const parseArgs = (argv: string[]): ParsedArgs => {
     const [, flag, value] = match;
     if (flag === "out") {
       out = value;
+    } else if (flag === "handle") {
+      props.handle = value;
     } else if (flag === "hook") {
       props.hook = value;
     } else if (flag === "music") {

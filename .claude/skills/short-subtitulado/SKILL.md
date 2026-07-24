@@ -12,7 +12,7 @@ Audio or video in, rendered `.mp4` out.
 When the caption settings are already right for this kind of material:
 
 ```
-npm run short -- <file> [more files...] [--out=x.mp4] [--from=12] [--to=1:30] [--music=song.mp3] [--hook="MIRA ESTO"]
+npm run short -- <file> [more files...] [--out=x.mp4] [--from=12] [--to=1:30] [--music=song.mp3] [--hook="MIRA ESTO"] [--handle=@you]
                    [--crop=left] [--zoom] [--fit] [--lang=es] [--caption=lower] [--color=#00e5ff]
 ```
 
@@ -99,6 +99,11 @@ All three are visual: render a still and look at it rather than reasoning about 
 ## Hook card
 
 `--hook="MIRA ESTO"` opens the short with a 2-second title card in the accent colour, before the video. It lengthens the output by 2s and keeps the captions timed to the video, not the card. Keep the text short — it renders big and wraps; four or five words is the ceiling before it looks cramped. Quote it in the shell so the spaces survive.
+
+## Watermark and keyword overlays
+
+- `--handle=@you` puts a small @handle watermark at the top, over the whole video.
+- `overlays.json` at the repo root (copy `overlays.example.json`) maps `{"keyword": "image.png"}` — the image pops in the upper third when you say that word, gone otherwise. Drop the images in `public/`, reference by filename. No flag: it is picked up automatically. This is the overlay worth doing in Remotion; one-off gifs placed by eye belong in CapCut.
 
 ## Notes
 

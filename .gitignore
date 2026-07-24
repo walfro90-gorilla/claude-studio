@@ -3,8 +3,9 @@ dist
 .DS_Store
 .env
 
-# Your personal transcript fixes; corrections.example.json is the tracked template.
+# Your personal config; the .example.json versions are the tracked templates.
 corrections.json
+overlays.json
 
 # Ignore the output video from Git but not videos you import into src/.
 out
@@ -27,3 +28,9 @@ public/*.wav
 public/*.m4a
 public/*.mp3
 !public/sample.mp3
+# Overlay images you drop in for keyword triggers.
+public/*.png
+public/*.jpg
+public/*.jpeg
+public/*.gif
+public/*.webp

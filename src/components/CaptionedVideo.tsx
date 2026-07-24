@@ -2,6 +2,8 @@ import { useMemo } from "react";
 import {
   AbsoluteFill,
   Audio,
+  Img,
+  interpolate,
   OffthreadVideo,
   Sequence,
   Series,
@@ -20,6 +22,7 @@ import {
   type Crop,
 } from "../lib/framing";
 import { DEFAULT_DUCK, musicVolumeAt } from "../lib/ducking";
+import { overlaysFromCaptions } from "../lib/overlays";
 
 // Pinned so the render does not depend on whatever font the rendering machine
 // happens to have. Remotion blocks the render until the font is ready, so the
@@ -60,12 +63,19 @@ export type CaptionedVideoProps = {
   hook: string | null;
   /** How many frames the hook card holds. 0 when there is no hook. */
   hookFrames: number;
+  /** @handle watermark shown over the whole video; null for none. */
+  handle: string | null;
+  /** Keyword -> image filename in public/, shown while the word is spoken. */
+  overlays: Record<string, string>;
 };
 
-// The video, captions and music. Split out so it can live inside a Sequence
-// that starts after the hook card, which rebases useCurrentFrame to 0 for it —
-// captions and music then time against the content, not the hook.
-type ContentProps = Omit<CaptionedVideoProps, "hook" | "hookFrames"> & {
+// The video, captions, music and keyword overlays. Split out so it can live
+// inside a Sequence that starts after the hook card, which rebases
+// useCurrentFrame to 0 — everything then times against the content, not the hook.
+type ContentProps = Omit<
+  CaptionedVideoProps,
+  "hook" | "hookFrames" | "handle"
+> & {
   /** The content's own length, for the zoom span (excludes the hook). */
   durationInFrames: number;
 };
@@ -79,11 +89,18 @@ const CaptionedContent: React.FC<ContentProps> = ({
   color,
   fit,
   musicSrc,
+  overlays,
   durationInFrames,
 }) => {
   const frame = useCurrentFrame();
   const { fps } = useVideoConfig();
   const ms = (frame / fps) * 1000;
+
+  // Keyword overlays resolved from the word timings, once per caption set.
+  const overlayInstances = useMemo(
+    () => overlaysFromCaptions(captions, overlays),
+    [captions, overlays],
+  );
 
   // Computed here, where the frame is ABSOLUTE within the content. Inside a
   // Series.Sequence it restarts from zero, so the push would snap back on
@@ -156,6 +173,17 @@ const CaptionedContent: React.FC<ContentProps> = ({
           </Series.Sequence>
         ))}
       </Series>
+      {/* Keyword overlays: above the video, below the captions, in the upper
+          third so they clear the lower-third caption block. */}
+      {overlayInstances.map((o, i) => {
+        const from = Math.round((o.fromMs / 1000) * fps);
+        const dur = Math.max(1, Math.round((o.toMs / 1000) * fps) - from);
+        return (
+          <Sequence key={`${o.src}-${from}-${i}`} from={from} durationInFrames={dur}>
+            <OverlayImage src={o.src} durationInFrames={dur} />
+          </Sequence>
+        );
+      })}
       {/* Its own layer: the video above is positioned, so a static caption
           element would be painted underneath it and vanish. flex-row because
           AbsoluteFill defaults to a column, which stacks every word on its
@@ -189,6 +217,57 @@ const CaptionedContent: React.FC<ContentProps> = ({
   );
 };
 
+// A keyword overlay: an image in the upper third, fading in and out so it
+// never pops. Its own component so it can call the frame hook for the fade.
+const FADE_FRAMES = 6;
+const OverlayImage: React.FC<{ src: string; durationInFrames: number }> = ({
+  src,
+  durationInFrames,
+}) => {
+  const frame = useCurrentFrame();
+  const opacity = interpolate(
+    frame,
+    [0, FADE_FRAMES, durationInFrames - FADE_FRAMES, durationInFrames],
+    [0, 1, 1, 0],
+    { extrapolateLeft: "clamp", extrapolateRight: "clamp" },
+  );
+  return (
+    <AbsoluteFill className="items-center justify-center" style={{ opacity }}>
+      <Img
+        src={staticFile(src)}
+        style={{
+          position: "absolute",
+          top: "18%",
+          width: "50%",
+          maxHeight: "35%",
+          objectFit: "contain",
+        }}
+      />
+    </AbsoluteFill>
+  );
+};
+
+// The @handle watermark: small, dim, top-centre, over the whole video.
+const HandleTag: React.FC<{ handle: string }> = ({ handle }) => (
+  <AbsoluteFill className="items-center" style={{ pointerEvents: "none" }}>
+    <div
+      style={{
+        position: "absolute",
+        top: "4%",
+        fontFamily,
+        fontSize: 40,
+        fontWeight: 900,
+        color: "white",
+        opacity: 0.85,
+        WebkitTextStroke: "5px black",
+        paintOrder: "stroke",
+      }}
+    >
+      {handle}
+    </div>
+  </AbsoluteFill>
+);
+
 // A full-screen title card on black, shown for hookFrames before the video.
 const HookCard: React.FC<{ text: string; color: string }> = ({
   text,
@@ -215,6 +294,7 @@ const HookCard: React.FC<{ text: string; color: string }> = ({
 export const CaptionedVideo: React.FC<CaptionedVideoProps> = ({
   hook,
   hookFrames,
+  handle,
   ...content
 }) => {
   const { durationInFrames } = useVideoConfig();
@@ -234,6 +314,8 @@ export const CaptionedVideo: React.FC<CaptionedVideoProps> = ({
           durationInFrames={durationInFrames - hookFrames}
         />
       </Sequence>
+      {/* Watermark spans the whole video, hook included — it is branding. */}
+      {handle === null ? null : <HandleTag handle={handle} />}
     </AbsoluteFill>
   );
 };

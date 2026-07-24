@@ -79,7 +79,7 @@ Inside a component, `useCurrentFrame()` drives all animation. Remotion renders e
 ## The one-command path
 
 ```
-npm run short -- <file> [more files...] [--out=x.mp4] [--from=12] [--to=1:30] [--music=song.mp3] [--hook="MIRA ESTO"]
+npm run short -- <file> [more files...] [--out=x.mp4] [--from=12] [--to=1:30] [--music=song.mp3] [--hook="MIRA ESTO"] [--handle=@you]
                    [--crop=left] [--zoom] [--fit] [--lang=es] [--caption=lower] [--color=#00e5ff]
 node scripts/short.mts --check                  # routing self-check, no API call, no render
 ```
@@ -200,6 +200,15 @@ ffmpeg -f lavfi -i "testsrc2=size=1920x1080:rate=30:duration=22" -c:v libx264 -p
 There is no agent binary in this repo, deliberately. Claude Code is the agent: it reads this file, runs the npm scripts, and edits compositions. Repeatable workflows are captured as skills in `.claude/skills/` rather than as code — `short-subtitulado` covers the audio → transcript → tuned render path end to end.
 
 A standalone `scripts/agent.mts` on the Anthropic SDK was considered and deferred. It buys headless operation (CI, cron, someone else running it) and nothing else right now; the `lib/` split above is what makes it a short job when that need is real. Do not build it speculatively.
+
+## Watermark and keyword overlays
+
+Two branding layers, both Remotion-native because they use data an external editor lacks:
+
+- `--handle=@you` — a small dimmed watermark, top-centre, over the whole video (hook included). Pure text, no asset.
+- `overlays.json` at the repo root (gitignored; `overlays.example.json` is the template) maps `{"keyword": "image.png"}`. When the word is spoken, the image fades in over the upper third and holds until the word ends or `OVERLAY_HOLD_MS` (1300) passes, whichever is later — so a short word does not flash it. The images live in `public/`, referenced by filename; the map is auto-loaded by `short` into the `overlays` prop, so no flag is needed. `overlaysFromCaptions` in `src/lib/overlays.ts` resolves the timings from the captions (whole word, case-insensitive, punctuation ignored); `duckFactorAt`-style purity keeps it testable.
+
+The keyword trigger is the one thing CapCut cannot do easily — it does not know the word timings. Hand-placed one-off gifs are faster in a visual editor; use `overlays.json` only for the images tied to specific words you say.
 
 ## Hook card
 
