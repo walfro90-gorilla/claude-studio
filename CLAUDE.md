@@ -113,6 +113,12 @@ The flag is validated by *shape* (`es`, `en_us`), not against AssemblyAI's hundr
 
 Verified end to end on Spanish: detection picked `es` at 99%, the transcript carried its accents, and Montserrat renders the full repertoire — `¿ ¡ Ñ Á É Í Ó Ú Ü` — under `subsets: ["latin"]`. A missing glyph would render as a blank box, and only a still shows it.
 
+### Fixing misheard words
+
+The transcriber reliably mishears brand and product names — "cloud" for Claude, and worse in a second language. `corrections.json` at the repo root (gitignored; `corrections.example.json` is the template) is a `{"misheard": "correct"}` map applied after every transcription by both `short` and `transcribe`, so a fix survives re-running. `applyCorrections` in `scripts/lib/captions.mts` matches whole words case-insensitively, keeps trailing punctuation, and preserves the ALL-CAPS shape the captions render in. Reading the file is `scripts/lib/corrections.mts`, kept apart so `captions.mts` stays fs-free.
+
+Single-word only, on purpose: a one-to-many fix (`"mister all"` → Mistral) spans two timestamped words and is deferred until it bites, since it needs a matcher over the token stream rather than a bigger map.
+
 ### The mapping
 
 The one non-obvious detail, and the reason the mapping isn't a plain field rename: `createTikTokStyleCaptions` from `@remotion/captions` splits pages on a **leading space** in `Caption.text` and otherwise concatenates tokens verbatim. AssemblyAI's words carry no leading space, so a naive mapping glues the whole transcript into a single unbreakable word. `wordsToCaptions` prepends a space to every word except the first; `--check` asserts exactly that and fails if it regresses.

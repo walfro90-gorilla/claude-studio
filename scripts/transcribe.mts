@@ -6,11 +6,13 @@ import { basename } from "node:path";
 import type { TranscriptWord } from "assemblyai";
 import { createTikTokStyleCaptions } from "@remotion/captions";
 import {
+  applyCorrections,
   isLanguageCode,
   transcribeToCaptions,
   wordsToCaptions,
 } from "./lib/captions.mts";
 import { clipForInput } from "./lib/short.mts";
+import { loadCorrections } from "./lib/corrections.mts";
 
 const DEFAULT_OUT = "public/captions.json";
 
@@ -62,9 +64,10 @@ const main = async () => {
   }
 
   const result = await transcribeToCaptions({ audio, apiKey, languageCode });
+  const captions = applyCorrections(result.captions, loadCorrections());
   // Same one-clip-per-entry shape the composition reads; `npm run short`
   // writes several entries into the same file.
-  const clip = { ...clipForInput(basename(audio)), captions: result.captions };
+  const clip = { ...clipForInput(basename(audio)), captions };
   writeFileSync(out, JSON.stringify({ clips: [clip] }, null, 2));
   const detected =
     result.languageConfidence === null

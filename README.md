@@ -51,6 +51,8 @@ Two constants decide the feel. Change them, render one still, look at it.
 
 Font, size, colour, and stroke live in `CaptionedVideo.tsx`.
 
+**Fixing misheard names.** Copy `corrections.example.json` to `corrections.json` and fill it with `"misheard": "correct"` pairs — the transcriber tends to mangle brand and product names. It is applied on every run, so a fix sticks.
+
 ## Other commands
 
 ```console

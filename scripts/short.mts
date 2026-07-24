@@ -7,7 +7,8 @@ import { basename, resolve } from "node:path";
 import type { Caption } from "@remotion/captions";
 import { transcribeToCaptions } from "./lib/captions.mts";
 import { clipForInput, isVideo, parseArgs, parseTime } from "./lib/short.mts";
-import { isLanguageCode } from "./lib/captions.mts";
+import { applyCorrections, isLanguageCode } from "./lib/captions.mts";
+import { loadCorrections } from "./lib/corrections.mts";
 // Crossing into src/ is safe here and only here: silence.ts is pure, imports
 // nothing but a type, and touches neither the DOM nor the filesystem.
 import { trimClips, trimSilence } from "../src/lib/silence.ts";
@@ -39,7 +40,35 @@ const check = () => {
   checkSilence();
   checkConcat();
   checkClip();
+  checkCorrections();
   console.log("ok");
+};
+
+const checkCorrections = () => {
+  const caps = [
+    { text: "cloud", startMs: 0, endMs: 300, timestampMs: 150, confidence: 1 },
+    { text: " Cloud.", startMs: 400, endMs: 700, timestampMs: 550, confidence: 1 },
+    { text: " CLOUD", startMs: 800, endMs: 1100, timestampMs: 950, confidence: 1 },
+    { text: " otro", startMs: 1200, endMs: 1500, timestampMs: 1350, confidence: 1 },
+  ];
+  const fixed = applyCorrections(caps, { cloud: "Claude" });
+
+  if (fixed[0].text !== "Claude") throw new Error("first word keeps no leading space");
+  if (fixed[1].text !== " Claude.") throw new Error("trailing punctuation must survive");
+  if (fixed[2].text !== " CLAUDE") throw new Error("an all-caps word must stay all-caps");
+  if (fixed[3].text !== " otro") throw new Error("a non-match must be left untouched");
+  // Timing and everything else must pass through unchanged.
+  if (fixed[0].startMs !== 0 || fixed[1].endMs !== 700) {
+    throw new Error("corrections must not touch timing");
+  }
+  // An empty map is the common case and must be a no-op.
+  if (applyCorrections(caps, {}) !== caps) {
+    throw new Error("no corrections must be a cheap no-op");
+  }
+  // The map key matches case-insensitively too.
+  if (applyCorrections([caps[2]], { CLOUD: "Claude" })[0].text !== " CLAUDE") {
+    throw new Error("the map key must match case-insensitively");
+  }
 };
 
 // Two words, then four seconds of nothing, then two more.
@@ -439,6 +468,7 @@ const main = async () => {
   }
 
   const names = inputs.map(ensureInPublic);
+  const corrections = loadCorrections();
   const clips = [];
 
   // Transcribed one at a time rather than in parallel: AssemblyAI rate-limits
@@ -462,7 +492,10 @@ const main = async () => {
     if (result.languageConfidence !== null && result.languageConfidence < 0.7) {
       console.log(`  low confidence — pass --lang=<code> if that is wrong`);
     }
-    clips.push({ ...clipForInput(name), captions: result.captions });
+    clips.push({
+      ...clipForInput(name),
+      captions: applyCorrections(result.captions, corrections),
+    });
   }
 
   writeFileSync(CAPTIONS_OUT, JSON.stringify({ clips }, null, 2));

@@ -44,6 +44,8 @@ This handles one file. For several clips in one short, use `npm run short` above
 
 **Read the language line it prints** (`49 words, detected es (99% sure)`). If detection picked the wrong language, or says it is unsure, re-run with `--lang=` rather than accepting a transcript that will read as gibberish.
 
+If specific words come back wrong — usually brand or product names — add them to `corrections.json` at the repo root (`{"misheard": "correct"}`, copy `corrections.example.json`) rather than editing the transcript. It is applied on every run, so hand edits to `captions.json` would be lost but the map is not.
+
 ## 2. Check the duration picked up
 
 ```

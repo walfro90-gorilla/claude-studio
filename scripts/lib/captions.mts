@@ -14,6 +14,40 @@ export const wordsToCaptions = (words: TranscriptWord[]): Caption[] =>
     confidence: w.confidence,
   }));
 
+/**
+ * Fixes words the transcriber reliably mishears — brand and product names most
+ * of all ("cloud" for Claude). The map is misheard→correct, matched
+ * case-insensitively on the whole word; the replacement keeps the original's
+ * leading space, timing, and capitalisation shape (ALL CAPS in, ALL CAPS out,
+ * since the captions render uppercase).
+ *
+ * ponytail: whole single words only. A one→many fix ("mister all"→Mistral)
+ * spans two timestamped words and is left for when it actually bites — a
+ * multi-word matcher over the token stream, not a bigger map.
+ */
+export const applyCorrections = (
+  captions: Caption[],
+  corrections: Record<string, string>,
+): Caption[] => {
+  const lower = new Map(
+    Object.entries(corrections).map(([k, v]) => [k.toLowerCase(), v]),
+  );
+  if (lower.size === 0) return captions;
+
+  return captions.map((caption) => {
+    const lead = caption.text.startsWith(" ") ? " " : "";
+    const word = caption.text.slice(lead.length);
+    // Keep punctuation attached to the word ("cloud." stays "Claude.").
+    const match = /^([\p{L}\p{N}']+)(.*)$/u.exec(word);
+    if (match === null) return caption;
+    const [, core, tail] = match;
+    const fix = lower.get(core.toLowerCase());
+    if (fix === undefined) return caption;
+    const cased = core === core.toUpperCase() ? fix.toUpperCase() : fix;
+    return { ...caption, text: `${lead}${cased}${tail}` };
+  });
+};
+
 export type TranscribeInput = {
   /** Local file path, public URL, readable stream or buffer. */
   audio: string;
