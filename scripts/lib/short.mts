@@ -42,6 +42,7 @@ export type RenderProps = {
   zoom: boolean;
   caption: CaptionPosition;
   color: string;
+  fit: boolean;
 };
 
 export type ParsedArgs = {
@@ -70,6 +71,7 @@ export const parseArgs = (argv: string[]): ParsedArgs => {
     zoom: false,
     caption: "lower",
     color: DEFAULT_COLOR,
+    fit: false,
   };
   let out = DEFAULT_OUT;
   let languageCode: string | null = null;
@@ -77,6 +79,10 @@ export const parseArgs = (argv: string[]): ParsedArgs => {
   for (const arg of argv) {
     if (arg === "--zoom") {
       props.zoom = true;
+      continue;
+    }
+    if (arg === "--fit") {
+      props.fit = true;
       continue;
     }
     const match = /^--(from|to|out|crop|lang|caption|color)=(.+)$/.exec(arg);

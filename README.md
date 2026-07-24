@@ -40,6 +40,7 @@ Each run prints the language it transcribed in — `49 words, detected es (99% s
 | `--lang=` | Pin the transcription language (`es`, `en_us`, …). Detected otherwise. |
 | `--caption=` | `lower` (default), `center`, `upper`. Where captions sit vertically. |
 | `--color=` | Highlight colour of the spoken word, hex (default `#fde047`). |
+| `--fit` | Fit the whole frame with bars instead of cropping to 9:16. For screen recordings. |
 
 Expect the output to be shorter than the input: pauses over 700ms are cut. Video-backed renders take minutes, audio-over-black takes seconds.
 

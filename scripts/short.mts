@@ -165,15 +165,23 @@ const checkClip = () => {
   }
   if (many.out !== "out/short.mp4") throw new Error("--out must have a default");
 
-  const framed = parseArgs(["a.mp4", "--crop=left", "--zoom", "--caption=upper"]);
+  const framed = parseArgs([
+    "a.mp4",
+    "--crop=left",
+    "--zoom",
+    "--caption=upper",
+    "--fit",
+  ]);
   if (framed.props.crop !== "left" || !framed.props.zoom) {
     throw new Error("--crop/--zoom must reach the props");
   }
   if (framed.props.caption !== "upper") {
     throw new Error("--caption must reach the props");
   }
+  if (!framed.props.fit) throw new Error("--fit must reach the props");
+  if (parseArgs(["a.mp4"]).props.fit) throw new Error("fit must default to off (cover)");
   if (framed.inputs.join() !== "a.mp4") {
-    throw new Error("--zoom takes no value and must not be read as an input");
+    throw new Error("valueless flags must not be read as inputs");
   }
   // The short-form default sits low, out of the platform UI, not centred.
   if (parseArgs(["a.mp4"]).props.caption !== "lower") {
@@ -477,7 +485,7 @@ const main = async () => {
     throw new Error(
       "usage: npm run short -- <file> [more files...]\n" +
         "         [--out=x.mp4] [--from=12] [--to=1:30]\n" +
-        "         [--crop=left] [--zoom] [--lang=es] [--caption=lower] [--color=#00e5ff]\n" +
+        "         [--crop=left] [--zoom] [--fit] [--lang=es] [--caption=lower] [--color=#00e5ff]\n" +
         "       (needs ASSEMBLYAI_API_KEY in .env)",
     );
   }

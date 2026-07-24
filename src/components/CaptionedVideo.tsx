@@ -50,6 +50,8 @@ export type CaptionedVideoProps = {
   caption: CaptionPosition;
   /** Colour of the currently-spoken word. Any CSS colour. */
   color: string;
+  /** contain (fit the whole frame with bars) instead of cover (crop to 9:16). */
+  fit: boolean;
 };
 
 export const CaptionedVideo: React.FC<CaptionedVideoProps> = ({
@@ -59,6 +61,7 @@ export const CaptionedVideo: React.FC<CaptionedVideoProps> = ({
   zoom,
   caption,
   color,
+  fit,
 }) => {
   const frame = useCurrentFrame();
   const { fps, durationInFrames } = useVideoConfig();
@@ -69,8 +72,10 @@ export const CaptionedVideo: React.FC<CaptionedVideoProps> = ({
   const videoStyle = {
     width: "100%",
     height: "100%",
-    objectFit: "cover",
-    objectPosition: objectPositionFor(crop),
+    // contain fits the whole frame with bars, for screen recordings whose
+    // edges matter; cover crops to 9:16. crop only bites under cover.
+    objectFit: fit ? "contain" : "cover",
+    objectPosition: fit ? "50% 50%" : objectPositionFor(crop),
     transform: `scale(${zoomScaleAt(frame, durationInFrames, zoom)})`,
   } as const;
 

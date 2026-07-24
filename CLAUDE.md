@@ -80,7 +80,7 @@ Inside a component, `useCurrentFrame()` drives all animation. Remotion renders e
 
 ```
 npm run short -- <file> [more files...] [--out=x.mp4] [--from=12] [--to=1:30]
-                   [--crop=left] [--zoom] [--lang=es] [--caption=lower] [--color=#00e5ff]
+                   [--crop=left] [--zoom] [--fit] [--lang=es] [--caption=lower] [--color=#00e5ff]
 node scripts/short.mts --check                  # routing self-check, no API call, no render
 ```
 
@@ -176,6 +176,9 @@ npm run render -- Captions out/v.mp4 --props='{"crop":"right","zoom":true}'
 - `--caption=` — `lower` (default), `center`, `upper`. Where the caption block sits vertically. `lower` keeps it in the bottom third but padded up 18%, clear of the platform's own buttons and description overlay.
 
 The caption block is a wrapping flex **row**, so its lines run down the cross axis: `alignContent` moves them vertically, not `justifyContent` (that stays centred for horizontal centring). `captionLayoutFor` in `framing.ts` returns the `alignContent` plus a height-fraction padding.
+
+- `--color=` — hex colour of the currently-spoken word (default `#fde047`). Validated at parse time; a named colour is rejected so a typo fails before a render, not after.
+- `--fit` — `objectFit: contain` (whole frame, black bars) instead of `cover` (crop to 9:16). For screen recordings whose edges carry content. `--crop` is a no-op under `--fit`, since nothing is cropped away.
 
 The zoom's one trap: it is driven by the **absolute** frame, computed in `CaptionedVideo` rather than inside the `<Series.Sequence>`. Inside a sequence the frame restarts at zero, so the push would snap back to 1.0 on every silence cut. Anything else animated across the whole video has to be computed in the same place, for the same reason.
 

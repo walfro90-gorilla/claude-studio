@@ -13,7 +13,7 @@ When the caption settings are already right for this kind of material:
 
 ```
 npm run short -- <file> [more files...] [--out=x.mp4] [--from=12] [--to=1:30]
-                   [--crop=left] [--zoom] [--lang=es] [--caption=lower] [--color=#00e5ff]
+                   [--crop=left] [--zoom] [--fit] [--lang=es] [--caption=lower] [--color=#00e5ff]
 ```
 
 Every positional argument is an input, played in the order given — several files become one short, and video and audio clips can mix. The destination is `--out=`, defaulting to `out/short.mp4`.
@@ -87,6 +87,7 @@ A video-backed render is much slower than one on black (minutes, not seconds). T
 
 - `--crop=` — `center` (default), `left`, `right`, `top`, `bottom`. Horizontal footage is cropped to 9:16, and this picks which part survives. If the speaker sits off to one side, this is the fix; a still is the only way to tell.
 - `--zoom` — slow push across the whole video, so a locked-off shot does not read as a still frame.
+- `--fit` — fit the whole frame with black bars instead of cropping to 9:16. For screen recordings whose edges matter (a toolbar, a panel). `--crop` has no effect under `--fit`.
 - `--caption=` — `lower` (default), `center`, `upper`. `lower` is the short-form default: bottom third, held above the platform's own buttons/description. `center` overlaps whatever is mid-frame — usually the speaker or the focal graphic — so avoid it on real footage.
 
 All three are visual: render a still and look at it rather than reasoning about where the subject sits.
