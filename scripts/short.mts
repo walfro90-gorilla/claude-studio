@@ -3,7 +3,7 @@
 //   node scripts/short.mts --check      # self-check, no API call, no render
 import { spawnSync } from "node:child_process";
 import { copyFileSync, existsSync, writeFileSync } from "node:fs";
-import { basename, resolve } from "node:path";
+import { basename, extname, resolve } from "node:path";
 import type { Caption } from "@remotion/captions";
 import { transcribeToCaptions } from "./lib/captions.mts";
 import { clipForInput, isVideo, parseArgs, parseTime } from "./lib/short.mts";
@@ -458,7 +458,14 @@ const checkConcat = () => {
 const ensureInPublic = (input: string): string => {
   const source = resolve(input);
   if (!existsSync(source)) {
-    throw new Error(`no such file: ${input}`);
+    // A bare token with no extension and no path is almost never a real input —
+    // it is usually a flag value npm swallowed when `--` was left out, so the
+    // script sees `es` where it expected `--lang=es`.
+    const looksStripped = !input.includes("/") && !extname(input);
+    const hint = looksStripped
+      ? "\n(did you forget `--` after `npm run short`? without it npm eats the --flags)"
+      : "";
+    throw new Error(`no such file: ${input}${hint}`);
   }
   const name = basename(source);
   const target = resolve(PUBLIC_DIR, name);
