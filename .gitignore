@@ -23,3 +23,7 @@ public/*.webm
 public/*.avi
 public/*.m4v
 public/*.mp4
+public/*.wav
+public/*.m4a
+public/*.mp3
+!public/sample.mp3
