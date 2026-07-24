@@ -79,7 +79,8 @@ Inside a component, `useCurrentFrame()` drives all animation. Remotion renders e
 ## The one-command path
 
 ```
-npm run short -- <file> [more files...] [--out=x.mp4] [--from=12] [--to=1:30] [--crop=left] [--zoom]
+npm run short -- <file> [more files...] [--out=x.mp4] [--from=12] [--to=1:30]
+                   [--crop=left] [--zoom] [--lang=es]
 node scripts/short.mts --check                  # routing self-check, no API call, no render
 ```
 
@@ -96,11 +97,21 @@ Reach for the individual commands below when tuning; `short` is for when the set
 AssemblyAI complements Remotion rather than overlapping it: it turns audio into word-level timestamps, Remotion turns those into animated captions. `scripts/transcribe.mts` is the bridge.
 
 ```
-npm run transcribe -- <audio-path-or-url> [out.json]   # key read from .env
+npm run transcribe -- <audio-path-or-url> [out.json] [--lang=es]   # key read from .env
 node scripts/transcribe.mts --check                    # mapping self-check, no API call, no key
 ```
 
 `ASSEMBLYAI_API_KEY` lives in `.env` (gitignored; `.env.example` is the template). Node loads it via `--env-file-if-exists` in the npm script. Output defaults to `public/captions.json`, written as `{clips: [...]}` — the same shape `npm run short` produces, with one entry. Node runs the `.mts` directly via native type stripping — no build step, no ts-node.
+
+### Language
+
+Detection runs by default and **the chosen language is printed on every run** (`49 words, detected es (99% sure)`), because a wrong language is otherwise only discovered by watching the finished video. Below 70% confidence it also says so. Pin it with `--lang=es` when the answer is known — `transcribeToCaptions` then sends `language_code` instead of `language_detection`.
+
+The flag is validated by *shape* (`es`, `en_us`), not against AssemblyAI's hundred-entry list, which would go stale. That catches a typo before it costs an API call and lets any real code through.
+
+Verified end to end on Spanish: detection picked `es` at 99%, the transcript carried its accents, and Montserrat renders the full repertoire — `¿ ¡ Ñ Á É Í Ó Ú Ü` — under `subsets: ["latin"]`. A missing glyph would render as a blank box, and only a still shows it.
+
+### The mapping
 
 The one non-obvious detail, and the reason the mapping isn't a plain field rename: `createTikTokStyleCaptions` from `@remotion/captions` splits pages on a **leading space** in `Caption.text` and otherwise concatenates tokens verbatim. AssemblyAI's words carry no leading space, so a naive mapping glues the whole transcript into a single unbreakable word. `wordsToCaptions` prepends a space to every word except the first; `--check` asserts exactly that and fails if it regresses.
 

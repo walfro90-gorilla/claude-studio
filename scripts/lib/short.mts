@@ -3,6 +3,7 @@
 import { extname } from "node:path";
 // Crossing into src/ is safe here: framing.ts is pure and touches no DOM.
 import { CROPS, isCrop, type Crop } from "../../src/lib/framing.ts";
+import { isLanguageCode } from "./captions.mts";
 
 const VIDEO_EXTENSIONS = [".mp4", ".mov", ".mkv", ".webm", ".avi", ".m4v"];
 
@@ -38,6 +39,8 @@ export type ParsedArgs = {
   out: string;
   /** Passed straight through to the composition as --props. */
   props: RenderProps;
+  /** Pinned transcription language. `null` asks AssemblyAI to detect it. */
+  languageCode: string | null;
 };
 
 const DEFAULT_OUT = "out/short.mp4";
@@ -56,13 +59,14 @@ export const parseArgs = (argv: string[]): ParsedArgs => {
     zoom: false,
   };
   let out = DEFAULT_OUT;
+  let languageCode: string | null = null;
 
   for (const arg of argv) {
     if (arg === "--zoom") {
       props.zoom = true;
       continue;
     }
-    const match = /^--(from|to|out|crop)=(.+)$/.exec(arg);
+    const match = /^--(from|to|out|crop|lang)=(.+)$/.exec(arg);
     if (match === null) {
       inputs.push(arg);
       continue;
@@ -70,6 +74,11 @@ export const parseArgs = (argv: string[]): ParsedArgs => {
     const [, flag, value] = match;
     if (flag === "out") {
       out = value;
+    } else if (flag === "lang") {
+      if (!isLanguageCode(value)) {
+        throw new Error(`bad --lang: ${value} (use a code like es, en, en_us)`);
+      }
+      languageCode = value;
     } else if (flag === "crop") {
       if (!isCrop(value)) {
         throw new Error(`bad --crop: ${value} (use ${CROPS.join(", ")})`);
@@ -97,5 +106,5 @@ export const parseArgs = (argv: string[]): ParsedArgs => {
   ) {
     throw new Error("--from/--to work on a single input; trim the clips first");
   }
-  return { inputs, out, props };
+  return { inputs, out, props, languageCode };
 };

@@ -19,21 +19,45 @@ export type TranscribeInput = {
   audio: string;
   apiKey: string;
   /** Omitted = auto-detect. Pin it when the audio language is known. */
-  languageCode?: string;
+  languageCode?: string | null;
 };
+
+export type TranscribeResult = {
+  captions: Caption[];
+  /** What the audio was taken to be — the pinned code, or what detection chose. */
+  languageCode: string | null;
+  /** Detection's own confidence, 0-1. `null` when the language was pinned. */
+  languageConfidence: number | null;
+};
+
+/**
+ * A language code is only accepted here as a shape (`es`, `en_us`); the real
+ * list lives at AssemblyAI and duplicating a hundred entries would go stale.
+ * This catches a typo before it costs an API call.
+ */
+export const isLanguageCode = (value: string): boolean =>
+  /^[a-z]{2,3}(_[a-z]{2,6})?$/.test(value);
 
 export const transcribeToCaptions = async ({
   audio,
   apiKey,
   languageCode,
-}: TranscribeInput): Promise<Caption[]> => {
+}: TranscribeInput): Promise<TranscribeResult> => {
   const client = new AssemblyAI({ apiKey });
   const transcript = await client.transcripts.transcribe({
     audio,
-    language_code: languageCode,
+    // Asking for detection explicitly, rather than leaving both unset, is what
+    // makes AssemblyAI report back which language it settled on.
+    ...(languageCode
+      ? { language_code: languageCode }
+      : { language_detection: true }),
   });
   if (transcript.status === "error") {
     throw new Error(transcript.error ?? "AssemblyAI returned an error");
   }
-  return wordsToCaptions(transcript.words ?? []);
+  return {
+    captions: wordsToCaptions(transcript.words ?? []),
+    languageCode: languageCode ?? transcript.language_code ?? null,
+    languageConfidence: languageCode ? null : (transcript.language_confidence ?? null),
+  };
 };

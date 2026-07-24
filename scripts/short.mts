@@ -7,6 +7,7 @@ import { basename, resolve } from "node:path";
 import type { Caption } from "@remotion/captions";
 import { transcribeToCaptions } from "./lib/captions.mts";
 import { clipForInput, isVideo, parseArgs, parseTime } from "./lib/short.mts";
+import { isLanguageCode } from "./lib/captions.mts";
 // Crossing into src/ is safe here and only here: silence.ts is pure, imports
 // nothing but a type, and touches neither the DOM nor the filesystem.
 import { trimClips, trimSilence } from "../src/lib/silence.ts";
@@ -138,11 +139,28 @@ const checkClip = () => {
   if (framed.inputs.join() !== "a.mp4") {
     throw new Error("--zoom takes no value and must not be read as an input");
   }
+  if (framed.languageCode !== null) {
+    throw new Error("no --lang must mean detection, not a guessed default");
+  }
+
+  const spanish = parseArgs(["voz.mp3", "--lang=es"]);
+  if (spanish.languageCode !== "es") throw new Error("--lang must reach the transcriber");
+  // The language is a transcription setting, not something the render sees.
+  if ("languageCode" in spanish.props) {
+    throw new Error("--lang must not leak into the render props");
+  }
+  for (const good of ["es", "en", "en_us", "de_ch", "zh"]) {
+    if (!isLanguageCode(good)) throw new Error(`${good} is a real code`);
+  }
+  for (const bad of ["", "e", "espanol", "es-ES", "ES", "es_"]) {
+    if (isLanguageCode(bad)) throw new Error(`${JSON.stringify(bad)} is not a code`);
+  }
 
   for (const [argv, why] of [
     [["--from=30", "--to=10"], "--to before --from"],
     [["a.mp4", "b.mp4", "--from=5"], "a window across several inputs"],
     [["a.mp4", "--crop=sideways"], "an unknown crop"],
+    [["a.mp4", "--lang=espanol"], "a language name instead of a code"],
   ] as const) {
     let threw = false;
     try {
@@ -372,13 +390,19 @@ const main = async () => {
   if (process.argv[2] === "--check") {
     return check();
   }
-  const { inputs, out, props: renderProps } = parseArgs(process.argv.slice(2));
+  const {
+    inputs,
+    out,
+    props: renderProps,
+    languageCode,
+  } = parseArgs(process.argv.slice(2));
 
   const apiKey = process.env.ASSEMBLYAI_API_KEY;
   if (inputs.length === 0 || !apiKey) {
     throw new Error(
       "usage: npm run short -- <file> [more files...]\n" +
-        "         [--out=x.mp4] [--from=12] [--to=1:30] [--crop=left] [--zoom]\n" +
+        "         [--out=x.mp4] [--from=12] [--to=1:30]\n" +
+        "         [--crop=left] [--zoom] [--lang=es]\n" +
         "       (needs ASSEMBLYAI_API_KEY in .env)",
     );
   }
@@ -392,12 +416,22 @@ const main = async () => {
     console.log(`transcribing ${name}...`);
     // ponytail: the file is uploaded whole, video track included. Strip the
     // audio out with ffmpeg first if the uploads get painful.
-    const captions = await transcribeToCaptions({
+    const result = await transcribeToCaptions({
       audio: resolve(PUBLIC_DIR, name),
       apiKey,
+      languageCode,
     });
-    console.log(`  ${captions.length} words`);
-    clips.push({ ...clipForInput(name), captions });
+    // Printed even when detection succeeded: a wrong language is otherwise
+    // only discovered by watching the finished video.
+    const detected =
+      result.languageConfidence === null
+        ? `language ${result.languageCode}`
+        : `detected ${result.languageCode} (${Math.round(result.languageConfidence * 100)}% sure)`;
+    console.log(`  ${result.captions.length} words, ${detected}`);
+    if (result.languageConfidence !== null && result.languageConfidence < 0.7) {
+      console.log(`  low confidence — pass --lang=<code> if that is wrong`);
+    }
+    clips.push({ ...clipForInput(name), captions: result.captions });
   }
 
   writeFileSync(CAPTIONS_OUT, JSON.stringify({ clips }, null, 2));

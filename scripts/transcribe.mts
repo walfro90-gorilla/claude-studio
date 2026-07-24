@@ -5,7 +5,11 @@ import { writeFileSync } from "node:fs";
 import { basename } from "node:path";
 import type { TranscriptWord } from "assemblyai";
 import { createTikTokStyleCaptions } from "@remotion/captions";
-import { transcribeToCaptions, wordsToCaptions } from "./lib/captions.mts";
+import {
+  isLanguageCode,
+  transcribeToCaptions,
+  wordsToCaptions,
+} from "./lib/captions.mts";
 import { clipForInput } from "./lib/short.mts";
 
 const DEFAULT_OUT = "public/captions.json";
@@ -38,24 +42,35 @@ const check = () => {
 };
 
 const main = async () => {
-  const [audio, out = DEFAULT_OUT] = process.argv.slice(2);
-  if (audio === "--check") {
+  const args = process.argv.slice(2);
+  if (args[0] === "--check") {
     return check();
   }
+  const lang = args.find((a) => a.startsWith("--lang="));
+  const [audio, out = DEFAULT_OUT] = args.filter((a) => !a.startsWith("--"));
 
   const apiKey = process.env.ASSEMBLYAI_API_KEY;
   if (!audio || !apiKey) {
     throw new Error(
-      "usage: npm run transcribe -- <audio> [out.json]  (needs ASSEMBLYAI_API_KEY in .env)",
+      "usage: npm run transcribe -- <audio> [out.json] [--lang=es]\n" +
+        "       (needs ASSEMBLYAI_API_KEY in .env)",
     );
   }
+  const languageCode = lang === undefined ? null : lang.slice("--lang=".length);
+  if (languageCode !== null && !isLanguageCode(languageCode)) {
+    throw new Error(`bad --lang: ${languageCode} (use a code like es, en, en_us)`);
+  }
 
-  const captions = await transcribeToCaptions({ audio, apiKey });
+  const result = await transcribeToCaptions({ audio, apiKey, languageCode });
   // Same one-clip-per-entry shape the composition reads; `npm run short`
   // writes several entries into the same file.
-  const clip = { ...clipForInput(basename(audio)), captions };
+  const clip = { ...clipForInput(basename(audio)), captions: result.captions };
   writeFileSync(out, JSON.stringify({ clips: [clip] }, null, 2));
-  console.log(`${captions.length} words -> ${out}`);
+  const detected =
+    result.languageConfidence === null
+      ? `language ${result.languageCode}`
+      : `detected ${result.languageCode} (${Math.round(result.languageConfidence * 100)}% sure)`;
+  console.log(`${result.captions.length} words, ${detected} -> ${out}`);
 };
 
 main().catch((err: Error) => {

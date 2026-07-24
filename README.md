@@ -27,12 +27,15 @@ npm run short -- clip.mp4 --crop=left --zoom       # reframe, and add a slow pus
 
 Every positional argument is an input; the destination is `--out=` (default `out/short.mp4`). A video input plays behind the captions cropped to 9:16; audio plays over black. Video and audio clips mix freely in one run.
 
+Each run prints the language it transcribed in — `49 words, detected es (99% sure)` — so a misdetection shows up there rather than in the finished video. Pin it with `--lang=es` when you already know.
+
 | Flag | Does |
 |---|---|
 | `--out=` | Where to write. Default `out/short.mp4`. |
 | `--from=` `--to=` | Manual in/out points. Seconds, `mm:ss` or `hh:mm:ss`. One input only. |
 | `--crop=` | `center` (default), `left`, `right`, `top`, `bottom`. |
 | `--zoom` | Slow Ken Burns push across the whole video. |
+| `--lang=` | Pin the transcription language (`es`, `en_us`, …). Detected otherwise. |
 
 Expect the output to be shorter than the input: pauses over 700ms are cut. Video-backed renders take minutes, audio-over-black takes seconds.
 

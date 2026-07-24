@@ -12,7 +12,8 @@ Audio or video in, rendered `.mp4` out.
 When the caption settings are already right for this kind of material:
 
 ```
-npm run short -- <file> [more files...] [--out=x.mp4] [--from=12] [--to=1:30] [--crop=left] [--zoom]
+npm run short -- <file> [more files...] [--out=x.mp4] [--from=12] [--to=1:30]
+                   [--crop=left] [--zoom] [--lang=es]
 ```
 
 Every positional argument is an input, played in the order given — several files become one short, and video and audio clips can mix. The destination is `--out=`, defaulting to `out/short.mp4`.
@@ -23,6 +24,8 @@ One command: copies the file into `public/`, transcribes it, cuts the silences, 
 
 The output is shorter than the input by design — pauses over 700ms are dropped. Tell the user how much came off; if they wanted the pauses, point them at `TRIM_SILENCE_OVER_MS` below rather than re-recording.
 
+`--lang=` pins the transcription language; without it AssemblyAI detects one and prints which, with its confidence. Check that line before trusting the captions.
+
 Use the four steps below instead when the material is new, the pacing needs tuning, or the render must be checked before committing minutes to it.
 
 ## The tuning path
@@ -32,14 +35,14 @@ Four steps; do not skip step 3.
 ## 1. Transcribe
 
 ```
-npm run transcribe -- <audio-path-or-url>
+npm run transcribe -- <audio-path-or-url> [--lang=es]
 ```
 
 Writes `public/captions.json` (overwrites the previous one — if the user may still want it, copy it aside first). Needs `ASSEMBLYAI_API_KEY` in `.env`; the npm script loads it. A minute of audio takes a few seconds.
 
 This handles one file. For several clips in one short, use `npm run short` above — it transcribes each one and joins them.
 
-If the audio language is known and detection has misfired, pass `languageCode` through `transcribeToCaptions` in `scripts/lib/captions.mts` rather than retrying blind.
+**Read the language line it prints** (`49 words, detected es (99% sure)`). If detection picked the wrong language, or says it is unsure, re-run with `--lang=` rather than accepting a transcript that will read as gibberish.
 
 ## 2. Check the duration picked up
 
