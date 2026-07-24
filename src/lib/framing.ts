@@ -8,6 +8,30 @@ export type Crop = (typeof CROPS)[number];
 export const isCrop = (value: string): value is Crop =>
   (CROPS as readonly string[]).includes(value);
 
+/** Where the caption block sits vertically in the 9:16 frame. */
+export const CAPTION_POSITIONS = ["lower", "center", "upper"] as const;
+export type CaptionPosition = (typeof CAPTION_POSITIONS)[number];
+
+export const isCaptionPosition = (value: string): value is CaptionPosition =>
+  (CAPTION_POSITIONS as readonly string[]).includes(value);
+
+/**
+ * Vertical placement of the caption block. The block is a flex ROW that wraps,
+ * so its lines run down the CROSS axis — `alignContent`, not `justifyContent`,
+ * moves them vertically (that one stays centred for horizontal centring).
+ * Padding is a fraction of frame height, keeping the block clear of the
+ * platform UI. `lower` is the short-form default: the app's buttons and
+ * description sit in the bottom ~8%, so the block ends above that.
+ */
+export const captionLayoutFor = (
+  position: CaptionPosition,
+): { alignContent: string; paddingTop: string; paddingBottom: string } =>
+  ({
+    lower: { alignContent: "flex-end", paddingTop: "0", paddingBottom: "18%" },
+    center: { alignContent: "center", paddingTop: "0", paddingBottom: "0" },
+    upper: { alignContent: "flex-start", paddingTop: "18%", paddingBottom: "0" },
+  })[position];
+
 /**
  * `objectFit: cover` keeps the centre by default; this moves the surviving
  * window for footage whose subject is not centred.

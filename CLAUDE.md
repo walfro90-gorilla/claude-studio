@@ -80,7 +80,7 @@ Inside a component, `useCurrentFrame()` drives all animation. Remotion renders e
 
 ```
 npm run short -- <file> [more files...] [--out=x.mp4] [--from=12] [--to=1:30]
-                   [--crop=left] [--zoom] [--lang=es]
+                   [--crop=left] [--zoom] [--lang=es] [--caption=lower]
 node scripts/short.mts --check                  # routing self-check, no API call, no render
 ```
 
@@ -167,6 +167,9 @@ npm run render -- Captions out/v.mp4 --props='{"crop":"right","zoom":true}'
 
 - `--crop=` — `center` (default), `left`, `right`, `top`, `bottom`. Picks which part of a wider source survives, via `objectPosition`. An unknown value is rejected at parse time rather than silently producing `undefined` in the style.
 - `--zoom` — a slow Ken Burns push to `ZOOM_TO` (1.12) across the whole video.
+- `--caption=` — `lower` (default), `center`, `upper`. Where the caption block sits vertically. `lower` keeps it in the bottom third but padded up 18%, clear of the platform's own buttons and description overlay.
+
+The caption block is a wrapping flex **row**, so its lines run down the cross axis: `alignContent` moves them vertically, not `justifyContent` (that stays centred for horizontal centring). `captionLayoutFor` in `framing.ts` returns the `alignContent` plus a height-fraction padding.
 
 The zoom's one trap: it is driven by the **absolute** frame, computed in `CaptionedVideo` rather than inside the `<Series.Sequence>`. Inside a sequence the frame restarts at zero, so the push would snap back to 1.0 on every silence cut. Anything else animated across the whole video has to be computed in the same place, for the same reason.
 

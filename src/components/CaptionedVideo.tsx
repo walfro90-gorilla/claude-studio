@@ -11,7 +11,13 @@ import {
 import { createTikTokStyleCaptions, type Caption } from "@remotion/captions";
 import { loadFont } from "@remotion/google-fonts/Montserrat";
 import type { Segment } from "../lib/silence";
-import { objectPositionFor, zoomScaleAt, type Crop } from "../lib/framing";
+import {
+  captionLayoutFor,
+  objectPositionFor,
+  zoomScaleAt,
+  type CaptionPosition,
+  type Crop,
+} from "../lib/framing";
 
 // Pinned so the render does not depend on whatever font the rendering machine
 // happens to have. Remotion blocks the render until the font is ready, so the
@@ -40,6 +46,8 @@ export type CaptionedVideoProps = {
   crop: Crop;
   /** Slow Ken Burns push across the whole video. */
   zoom: boolean;
+  /** Where the caption block sits vertically. */
+  caption: CaptionPosition;
 };
 
 export const CaptionedVideo: React.FC<CaptionedVideoProps> = ({
@@ -47,6 +55,7 @@ export const CaptionedVideo: React.FC<CaptionedVideoProps> = ({
   segments,
   crop,
   zoom,
+  caption,
 }) => {
   const frame = useCurrentFrame();
   const { fps, durationInFrames } = useVideoConfig();
@@ -108,9 +117,12 @@ export const CaptionedVideo: React.FC<CaptionedVideoProps> = ({
       {/* Its own layer: the video above is positioned, so a static caption
           element would be painted underneath it and vanish. flex-row because
           AbsoluteFill defaults to a column, which stacks every word on its
-          own line. */}
+          own line. justifyContent/padding place the block vertically. */}
       {page === undefined ? null : (
-        <AbsoluteFill className="flex-row flex-wrap content-center items-center justify-center gap-x-6 px-20 text-center">
+        <AbsoluteFill
+          className="flex-row flex-wrap items-center justify-center gap-x-6 px-20 text-center"
+          style={captionLayoutFor(caption)}
+        >
           {page.tokens.map((token, i) => (
             <span
               key={`${token.fromMs}-${i}`}

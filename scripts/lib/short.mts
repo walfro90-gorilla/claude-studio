@@ -2,7 +2,14 @@
 // returns what the composition should be handed.
 import { extname } from "node:path";
 // Crossing into src/ is safe here: framing.ts is pure and touches no DOM.
-import { CROPS, isCrop, type Crop } from "../../src/lib/framing.ts";
+import {
+  CAPTION_POSITIONS,
+  CROPS,
+  isCaptionPosition,
+  isCrop,
+  type CaptionPosition,
+  type Crop,
+} from "../../src/lib/framing.ts";
 import { isLanguageCode } from "./captions.mts";
 
 const VIDEO_EXTENSIONS = [".mp4", ".mov", ".mkv", ".webm", ".avi", ".m4v"];
@@ -31,6 +38,7 @@ export type RenderProps = {
   clipEndMs: number | null;
   crop: Crop;
   zoom: boolean;
+  caption: CaptionPosition;
 };
 
 export type ParsedArgs = {
@@ -57,6 +65,7 @@ export const parseArgs = (argv: string[]): ParsedArgs => {
     clipEndMs: null,
     crop: "center",
     zoom: false,
+    caption: "lower",
   };
   let out = DEFAULT_OUT;
   let languageCode: string | null = null;
@@ -66,7 +75,7 @@ export const parseArgs = (argv: string[]): ParsedArgs => {
       props.zoom = true;
       continue;
     }
-    const match = /^--(from|to|out|crop|lang)=(.+)$/.exec(arg);
+    const match = /^--(from|to|out|crop|lang|caption)=(.+)$/.exec(arg);
     if (match === null) {
       inputs.push(arg);
       continue;
@@ -84,6 +93,11 @@ export const parseArgs = (argv: string[]): ParsedArgs => {
         throw new Error(`bad --crop: ${value} (use ${CROPS.join(", ")})`);
       }
       props.crop = value;
+    } else if (flag === "caption") {
+      if (!isCaptionPosition(value)) {
+        throw new Error(`bad --caption: ${value} (use ${CAPTION_POSITIONS.join(", ")})`);
+      }
+      props.caption = value;
     } else if (flag === "from") {
       props.clipStartMs = parseTime(value);
     } else {

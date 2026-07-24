@@ -12,8 +12,10 @@ import { isLanguageCode } from "./lib/captions.mts";
 // nothing but a type, and touches neither the DOM nor the filesystem.
 import { trimClips, trimSilence } from "../src/lib/silence.ts";
 import {
+  CAPTION_POSITIONS,
   CROPS,
   ZOOM_TO,
+  captionLayoutFor,
   objectPositionFor,
   zoomScaleAt,
 } from "../src/lib/framing.ts";
@@ -132,12 +134,19 @@ const checkClip = () => {
   }
   if (many.out !== "out/short.mp4") throw new Error("--out must have a default");
 
-  const framed = parseArgs(["a.mp4", "--crop=left", "--zoom"]);
+  const framed = parseArgs(["a.mp4", "--crop=left", "--zoom", "--caption=upper"]);
   if (framed.props.crop !== "left" || !framed.props.zoom) {
     throw new Error("--crop/--zoom must reach the props");
   }
+  if (framed.props.caption !== "upper") {
+    throw new Error("--caption must reach the props");
+  }
   if (framed.inputs.join() !== "a.mp4") {
     throw new Error("--zoom takes no value and must not be read as an input");
+  }
+  // The short-form default sits low, out of the platform UI, not centred.
+  if (parseArgs(["a.mp4"]).props.caption !== "lower") {
+    throw new Error("captions must default to the lower third");
   }
   if (framed.languageCode !== null) {
     throw new Error("no --lang must mean detection, not a guessed default");
@@ -161,6 +170,7 @@ const checkClip = () => {
     [["a.mp4", "b.mp4", "--from=5"], "a window across several inputs"],
     [["a.mp4", "--crop=sideways"], "an unknown crop"],
     [["a.mp4", "--lang=espanol"], "a language name instead of a code"],
+    [["a.mp4", "--caption=middle"], "an unknown caption position"],
   ] as const) {
     let threw = false;
     try {
@@ -292,6 +302,27 @@ const checkFraming = () => {
   }
   // A one-frame video would divide by zero.
   if (zoomScaleAt(0, 1, true) !== 1) throw new Error("a single frame must not blow up");
+
+  // lower must push the block to the bottom with clearance; upper to the top;
+  // neither may leave the block flush against the edge (no UI clearance).
+  const lower = captionLayoutFor("lower");
+  if (lower.alignContent !== "flex-end" || lower.paddingBottom === "0") {
+    throw new Error("lower captions must sit at the bottom, clear of the edge");
+  }
+  const upper = captionLayoutFor("upper");
+  if (upper.alignContent !== "flex-start" || upper.paddingTop === "0") {
+    throw new Error("upper captions must sit at the top, clear of the edge");
+  }
+  const centered = captionLayoutFor("center");
+  if (centered.alignContent !== "center") {
+    throw new Error("center captions must stay centred");
+  }
+  for (const p of CAPTION_POSITIONS) {
+    const l = captionLayoutFor(p);
+    if (!/^(0|\d+%)$/.test(l.paddingTop) || !/^(0|\d+%)$/.test(l.paddingBottom)) {
+      throw new Error(`caption ${p} produced a bad padding`);
+    }
+  }
 };
 
 const checkConcat = () => {
@@ -402,7 +433,7 @@ const main = async () => {
     throw new Error(
       "usage: npm run short -- <file> [more files...]\n" +
         "         [--out=x.mp4] [--from=12] [--to=1:30]\n" +
-        "         [--crop=left] [--zoom] [--lang=es]\n" +
+        "         [--crop=left] [--zoom] [--lang=es] [--caption=lower]\n" +
         "       (needs ASSEMBLYAI_API_KEY in .env)",
     );
   }

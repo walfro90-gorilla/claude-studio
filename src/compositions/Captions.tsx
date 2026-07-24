@@ -58,6 +58,7 @@ export const Captions = () => {
         clipEndMs: null,
         crop: "center" as const,
         zoom: false,
+        caption: "lower" as const,
       }}
       calculateMetadata={calculateMetadata}
     />

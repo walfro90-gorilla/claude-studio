@@ -11,3 +11,12 @@ out
 
 # Generated test footage, too big to track. CLAUDE.md has the command to rebuild it.
 public/sample-bg.mp4
+
+# Your own media, copied into public/ by `npm run short`. Only the sample
+# fixtures (sample.mp3, captions.json) are tracked.
+public/*.mkv
+public/*.mov
+public/*.webm
+public/*.avi
+public/*.m4v
+public/*.mp4
