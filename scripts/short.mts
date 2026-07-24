@@ -12,6 +12,7 @@ import { loadCorrections } from "./lib/corrections.mts";
 // Crossing into src/ is safe here and only here: silence.ts is pure, imports
 // nothing but a type, and touches neither the DOM nor the filesystem.
 import { trimClips, trimSilence } from "../src/lib/silence.ts";
+import { musicVolumeAt } from "../src/lib/ducking.ts";
 import {
   CAPTION_POSITIONS,
   CROPS,
@@ -43,7 +44,57 @@ const check = () => {
   checkConcat();
   checkClip();
   checkCorrections();
+  checkDucking();
   console.log("ok");
+};
+
+const checkDucking = () => {
+  const opts = { full: 0.6, duck: 0.1, rampMs: 200 };
+  const speech = [{ startMs: 1000, endMs: 2000 }];
+
+  const near = (a: number, b: number) => Math.abs(a - b) < 1e-9;
+  // Full in silence, ducked under the word, and never outside [duck, full].
+  if (!near(musicVolumeAt(0, speech, opts), 0.6)) throw new Error("silence must be full volume");
+  if (!near(musicVolumeAt(1500, speech, opts), 0.1)) throw new Error("speech must duck");
+  for (const ms of [0, 800, 900, 1000, 1500, 2100, 3000]) {
+    const v = musicVolumeAt(ms, speech, opts);
+    if (v < opts.duck - 1e-9 || v > opts.full + 1e-9) {
+      throw new Error(`volume ${v} out of range at ${ms}ms`);
+    }
+  }
+  // The ramp is monotonic into the word and back out — no click, no overshoot.
+  if (!(musicVolumeAt(850, speech, opts) > musicVolumeAt(950, speech, opts))) {
+    throw new Error("volume must fall approaching a word");
+  }
+  if (!(musicVolumeAt(2050, speech, opts) < musicVolumeAt(2150, speech, opts))) {
+    throw new Error("volume must rise leaving a word");
+  }
+  // The midpoint of the ramp sits halfway between the two levels.
+  const mid = musicVolumeAt(1000 - opts.rampMs / 2, speech, opts);
+  if (Math.abs(mid - (opts.full + opts.duck) / 2) > 1e-9) {
+    throw new Error(`ramp midpoint should be halfway, got ${mid}`);
+  }
+  // Two words closer than a ramp apart must not let the music bob back up to
+  // full in the gap: overlapping ramps keep it well below halfway.
+  const close = [
+    { startMs: 1000, endMs: 1100 },
+    { startMs: 1150, endMs: 1300 },
+  ];
+  if (musicVolumeAt(1125, close, opts) >= (opts.full + opts.duck) / 2) {
+    throw new Error("a short gap between words must stay mostly ducked");
+  }
+  // Touching words keep the duck solid the whole way through.
+  const touching = [
+    { startMs: 1000, endMs: 1100 },
+    { startMs: 1100, endMs: 1300 },
+  ];
+  if (!near(musicVolumeAt(1100, touching, opts), opts.duck)) {
+    throw new Error("touching words must stay fully ducked at the seam");
+  }
+  // No music, no ducking data: full volume everywhere.
+  if (!near(musicVolumeAt(1500, [], opts), 0.6)) {
+    throw new Error("no speech must leave the music at full volume");
+  }
 };
 
 const checkCorrections = () => {
@@ -180,6 +231,14 @@ const checkClip = () => {
   }
   if (!framed.props.fit) throw new Error("--fit must reach the props");
   if (parseArgs(["a.mp4"]).props.fit) throw new Error("fit must default to off (cover)");
+
+  // Music is captured as a raw path (main copies it in); no music means none.
+  if (parseArgs(["a.mp4", "--music=song.mp3"]).music !== "song.mp3") {
+    throw new Error("--music must be captured as a path");
+  }
+  if (parseArgs(["a.mp4"]).music !== null) {
+    throw new Error("no --music must mean no music");
+  }
   if (framed.inputs.join() !== "a.mp4") {
     throw new Error("valueless flags must not be read as inputs");
   }
@@ -485,19 +544,24 @@ const main = async () => {
     out,
     props: renderProps,
     languageCode,
+    music,
   } = parseArgs(process.argv.slice(2));
 
   const apiKey = process.env.ASSEMBLYAI_API_KEY;
   if (inputs.length === 0 || !apiKey) {
     throw new Error(
       "usage: npm run short -- <file> [more files...]\n" +
-        "         [--out=x.mp4] [--from=12] [--to=1:30]\n" +
+        "         [--out=x.mp4] [--from=12] [--to=1:30] [--music=song.mp3]\n" +
         "         [--crop=left] [--zoom] [--fit] [--lang=es] [--caption=lower] [--color=#00e5ff]\n" +
         "       (needs ASSEMBLYAI_API_KEY in .env)",
     );
   }
 
   const names = inputs.map(ensureInPublic);
+  // Music rides over the whole video; it is not transcribed, only copied in.
+  if (music !== null) {
+    renderProps.musicSrc = ensureInPublic(music);
+  }
   const corrections = loadCorrections();
   const clips = [];
 

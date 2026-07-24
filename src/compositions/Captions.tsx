@@ -61,6 +61,7 @@ export const Captions = () => {
         caption: "lower" as const,
         color: "#fde047",
         fit: false,
+        musicSrc: null,
       }}
       calculateMetadata={calculateMetadata}
     />

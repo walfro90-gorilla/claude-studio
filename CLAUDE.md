@@ -79,7 +79,7 @@ Inside a component, `useCurrentFrame()` drives all animation. Remotion renders e
 ## The one-command path
 
 ```
-npm run short -- <file> [more files...] [--out=x.mp4] [--from=12] [--to=1:30]
+npm run short -- <file> [more files...] [--out=x.mp4] [--from=12] [--to=1:30] [--music=song.mp3]
                    [--crop=left] [--zoom] [--fit] [--lang=es] [--caption=lower] [--color=#00e5ff]
 node scripts/short.mts --check                  # routing self-check, no API call, no render
 ```
@@ -200,6 +200,14 @@ ffmpeg -f lavfi -i "testsrc2=size=1920x1080:rate=30:duration=22" -c:v libx264 -p
 There is no agent binary in this repo, deliberately. Claude Code is the agent: it reads this file, runs the npm scripts, and edits compositions. Repeatable workflows are captured as skills in `.claude/skills/` rather than as code — `short-subtitulado` covers the audio → transcript → tuned render path end to end.
 
 A standalone `scripts/agent.mts` on the Anthropic SDK was considered and deferred. It buys headless operation (CI, cron, someone else running it) and nothing else right now; the `lib/` split above is what makes it a short job when that need is real. Do not build it speculatively.
+
+## Background music that ducks
+
+`--music=song.mp3` lays a track over the whole video, ducked under speech. Like the silence cut, nothing analyses the audio — the word timings already say where the voice is. `src/lib/ducking.ts` returns a per-frame volume: `DEFAULT_DUCK.full` (0.55) in silence, `duck` (0.12) under a word, with a `rampMs` (200) glide on each edge so the level never clicks.
+
+The music is one `<Audio loop>` at the top of the composition, outside the `<Series>`, so it plays continuously across every segment and loops to cover any length. Its `volume` prop is a function of the frame; the speech intervals come from the already-shifted captions, so ducking lands on the trimmed timeline, not the source one.
+
+`duckFactorAt` takes the **max** across word intervals, so two words closer than a ramp never let the music bob back up in the gap between them. Verified end to end: on a rendered tone, the music sat ~11 dB quieter under words than in the gaps, and the dips lined up with the word times.
 
 ## Config
 

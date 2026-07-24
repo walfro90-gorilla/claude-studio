@@ -18,6 +18,7 @@ import {
   type CaptionPosition,
   type Crop,
 } from "../lib/framing";
+import { DEFAULT_DUCK, musicVolumeAt } from "../lib/ducking";
 
 // Pinned so the render does not depend on whatever font the rendering machine
 // happens to have. Remotion blocks the render until the font is ready, so the
@@ -52,6 +53,8 @@ export type CaptionedVideoProps = {
   color: string;
   /** contain (fit the whole frame with bars) instead of cover (crop to 9:16). */
   fit: boolean;
+  /** Background music filename in public/, ducked under speech. null for none. */
+  musicSrc: string | null;
 };
 
 export const CaptionedVideo: React.FC<CaptionedVideoProps> = ({
@@ -62,6 +65,7 @@ export const CaptionedVideo: React.FC<CaptionedVideoProps> = ({
   caption,
   color,
   fit,
+  musicSrc,
 }) => {
   const frame = useCurrentFrame();
   const { fps, durationInFrames } = useVideoConfig();
@@ -92,8 +96,23 @@ export const CaptionedVideo: React.FC<CaptionedVideoProps> = ({
     (p) => ms >= p.startMs && ms < p.startMs + p.durationMs,
   );
 
+  // Speech lives where the words are, on the already-trimmed timeline.
+  const speech = useMemo(
+    () => captions.map((c) => ({ startMs: c.startMs, endMs: c.endMs })),
+    [captions],
+  );
+
   return (
     <AbsoluteFill className="bg-black">
+      {/* One continuous layer over the whole video, looped to cover any length,
+          ducked under speech by the word timings — nothing analyses the audio. */}
+      {musicSrc === null ? null : (
+        <Audio
+          src={staticFile(musicSrc)}
+          loop
+          volume={(f) => musicVolumeAt((f / fps) * 1000, speech, DEFAULT_DUCK)}
+        />
+      )}
       {/* One sequence per surviving stretch, played back to back. trimBefore
           and trimAfter point into the SOURCE media; the silence between them
           never reaches the output. */}

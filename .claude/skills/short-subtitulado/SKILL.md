@@ -12,7 +12,7 @@ Audio or video in, rendered `.mp4` out.
 When the caption settings are already right for this kind of material:
 
 ```
-npm run short -- <file> [more files...] [--out=x.mp4] [--from=12] [--to=1:30]
+npm run short -- <file> [more files...] [--out=x.mp4] [--from=12] [--to=1:30] [--music=song.mp3]
                    [--crop=left] [--zoom] [--fit] [--lang=es] [--caption=lower] [--color=#00e5ff]
 ```
 
@@ -91,6 +91,10 @@ A video-backed render is much slower than one on black (minutes, not seconds). T
 - `--caption=` — `lower` (default), `center`, `upper`. `lower` is the short-form default: bottom third, held above the platform's own buttons/description. `center` overlaps whatever is mid-frame — usually the speaker or the focal graphic — so avoid it on real footage.
 
 All three are visual: render a still and look at it rather than reasoning about where the subject sits.
+
+## Music
+
+`--music=song.mp3` adds a background track that ducks under the voice automatically (down while words play, up in the gaps) and loops to cover the whole video. A still cannot show this — check it by playing the render, or leave it off for screen-recording commentary where music over the voice just competes.
 
 ## Notes
 

@@ -43,6 +43,8 @@ export type RenderProps = {
   caption: CaptionPosition;
   color: string;
   fit: boolean;
+  /** Music filename inside public/. Filled by main after copying the file in. */
+  musicSrc: string | null;
 };
 
 export type ParsedArgs = {
@@ -53,6 +55,8 @@ export type ParsedArgs = {
   props: RenderProps;
   /** Pinned transcription language. `null` asks AssemblyAI to detect it. */
   languageCode: string | null;
+  /** Raw path to a background-music file, or null. main copies it into public/. */
+  music: string | null;
 };
 
 const DEFAULT_OUT = "out/short.mp4";
@@ -72,9 +76,11 @@ export const parseArgs = (argv: string[]): ParsedArgs => {
     caption: "lower",
     color: DEFAULT_COLOR,
     fit: false,
+    musicSrc: null,
   };
   let out = DEFAULT_OUT;
   let languageCode: string | null = null;
+  let music: string | null = null;
 
   for (const arg of argv) {
     if (arg === "--zoom") {
@@ -85,7 +91,7 @@ export const parseArgs = (argv: string[]): ParsedArgs => {
       props.fit = true;
       continue;
     }
-    const match = /^--(from|to|out|crop|lang|caption|color)=(.+)$/.exec(arg);
+    const match = /^--(from|to|out|crop|lang|caption|color|music)=(.+)$/.exec(arg);
     if (match === null) {
       inputs.push(arg);
       continue;
@@ -93,6 +99,8 @@ export const parseArgs = (argv: string[]): ParsedArgs => {
     const [, flag, value] = match;
     if (flag === "out") {
       out = value;
+    } else if (flag === "music") {
+      music = value;
     } else if (flag === "color") {
       if (!isHexColor(value)) {
         throw new Error(`bad --color: ${value} (use a hex code like #00e5ff)`);
@@ -135,5 +143,5 @@ export const parseArgs = (argv: string[]): ParsedArgs => {
   ) {
     throw new Error("--from/--to work on a single input; trim the clips first");
   }
-  return { inputs, out, props, languageCode };
+  return { inputs, out, props, languageCode, music };
 };
