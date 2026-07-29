@@ -1,0 +1,227 @@
+<!--
+  Paste the <task> block below into a fresh Claude Code session on the new machine.
+  Fill the three <inputs> values first. Everything else is executable as written.
+  The human-readable version of this same procedure is INSTALL.md.
+-->
+
+<task>
+
+  <role>
+    You are setting up Claude Studio on a machine that has never run it. Claude Studio is a
+    console-driven video editor: a recording goes in, a vertical 1080x1920 short with
+    burned-in TikTok-style captions comes out — transcribed, silence-trimmed, and rendered
+    in one command. It is built on Remotion (video as React components) and AssemblyAI
+    (word-level transcription).
+
+    The repository is the entire system. Your job is to clone it, install it, wire in one
+    API key, and prove it renders — not to design or rewrite anything. After cloning, the
+    repo's own CLAUDE.md is the authority on how the code works; read it and defer to it
+    wherever it is more specific than this prompt.
+  </role>
+
+  <inputs>
+    <repo_url>FILL IN: git URL, or the path to a .bundle file copied onto this machine</repo_url>
+    <target_dir>FILL IN: where to clone, e.g. ~/Videos/claude-studio</target_dir>
+    <assemblyai_key>FILL IN, or leave blank and stop to ask the human at step 3</assemblyai_key>
+  </inputs>
+
+  <preconditions>
+    Check these before touching anything, and report all failures together rather than one
+    at a time.
+
+    <requirement check="node -v" min="22.18">
+      The scripts in scripts/ are .mts files executed directly by Node via native TypeScript
+      type stripping. There is no build step and no ts-node. The npm scripts pass no
+      --experimental-strip-types flag, so stripping must be on by default: Node 22.18+ or
+      23.6+. 24 LTS is the safe answer. Anything older cannot run them at all. If the version
+      is too old, stop and tell the human — do not install a Node version manager or upgrade
+      their system Node without being asked.
+    </requirement>
+
+    <requirement check="git --version">Needed to clone.</requirement>
+
+    <requirement check="df -h .">
+      Needs roughly 2 GB free. npm install pulls a Chrome build and an ffmpeg build for
+      Remotion.
+    </requirement>
+
+    <optional check="ffmpeg -version">
+      System ffmpeg is not required — Remotion bundles its own. It is worth having for
+      inspecting sources and building proxies, because Remotion's bundled build has most
+      filters compiled out. Note its absence; do not install it unprompted.
+    </optional>
+  </preconditions>
+
+  <procedure>
+
+    <step n="1" name="clone">
+      Clone repo_url into target_dir. A .bundle path clones exactly like a URL:
+      `git clone claude-studio.bundle claude-studio`. Work in that directory from here on.
+    </step>
+
+    <step n="2" name="install">
+      Run `npm i`. Expect several minutes and a large download on first run. Do not add,
+      remove, or upgrade any dependency. Remotion's packages are version-locked to each
+      other and must only ever move as a set, via `npm run upgrade`.
+    </step>
+
+    <step n="3" name="secrets">
+      `cp .env.example .env`, then write the AssemblyAI key into it on the
+      `ASSEMBLYAI_API_KEY=` line.
+
+      If assemblyai_key was left blank, stop here and ask the human for it. Do not invent a
+      placeholder, do not skip ahead to the render steps, and do not commit .env — it is
+      gitignored and must stay that way.
+
+      Then offer, but do not assume:
+        cp corrections.example.json corrections.json   # misheard word -> right spelling
+        cp overlays.example.json overlays.json         # keyword -> image shown when spoken
+      Both are gitignored personal config. corrections.json is worth creating early: the
+      transcriber reliably mishears brand and product names, and a fix there survives every
+      re-run.
+    </step>
+
+    <step n="4" name="orient">
+      Read CLAUDE.md and README.md now, before running anything else. CLAUDE.md documents
+      the two architectural boundaries that matter (src vs scripts, scripts/lib vs
+      scripts/*.mts), the caption mapping subtlety, the silence cut, and a set of render
+      traps that no automated check catches. You will need it for step 6.
+    </step>
+
+  </procedure>
+
+  <verification>
+    Run these gates in order, cheapest first. Each catches a different class of failure. Do
+    not report the install as working until gate 4 has passed and you have looked at the
+    image from gate 5.
+
+    <gate n="1" cmd="npm run check">
+      Pure logic: the caption mapping, the silence cut, chaining, the clip window,
+      corrections, ducking, overlays. No API call, no render, no key needed. Must print `ok`.
+    </gate>
+
+    <gate n="2" cmd="npm run lint">
+      eslint over src and scripts, plus tsc. Must exit clean.
+    </gate>
+
+    <gate n="3" cmd="npm run compositions">
+      Must list exactly one composition: `Captions`. That id is the public handle the CLI
+      and any script look it up by.
+    </gate>
+
+    <gate n="4" cmd="npm run render -- Captions out/smoke.mp4 --frames=0-29">
+      The cheapest proof that the webpack bundle, headless Chrome, and the encoder all work
+      together. Roughly 10-20 seconds. It renders the committed fixture — public/sample.mp3
+      and its transcript in public/captions.json — so it passes before any of the human's
+      own media exists.
+    </gate>
+
+    <gate n="5" cmd="npm run still -- Captions out/frame.png --frame=110">
+      Layout and timing bugs survive all four gates above. Render this still and actually
+      look at the image.
+
+      Expected: white uppercase Montserrat captions, one word highlighted in yellow
+      (#fde047), sitting in the lower third, over black.
+
+      Three failures and what each means — all three are documented in CLAUDE.md:
+        - Nothing visible at all: the captions were painted underneath the positioned video
+          layer. They must live in their own AbsoluteFill.
+        - One word per line: AbsoluteFill is flex-direction column; the caption block needs
+          flex-row.
+        - Wrong typeface: the loadFont call from @remotion/google-fonts/Montserrat at module
+          scope in CaptionedVideo.tsx is not taking effect, and the render fell back to
+          whatever font this machine happens to have.
+    </gate>
+  </verification>
+
+  <handoff>
+    Once every gate passes, show the human how to make their first short:
+
+      npm run short -- their-recording.mp4 --lang=es
+
+    Tell them plainly: every positional argument is an input played in order, the output is
+    named with --out= and defaults to out/short.mp4, and a render with video behind the
+    captions takes minutes rather than seconds because OffthreadVideo extracts each frame
+    with ffmpeg. Point them at README.md for the full flag table.
+
+    Delete out/smoke.mp4 and out/frame.png, or say that you left them.
+  </handoff>
+
+  <known_traps>
+    Found the hard way on the machine this repo came from. None are visible in the code.
+
+    <trap name="large-or-exotic-source-footage">
+      `npm run short` uploads each input to AssemblyAI whole — video track included — and
+      renders from that same file. Modern camera footage is a bad fit for both: drone and
+      phone clips are commonly 4K or 3K, 10-bit HEVC, 48-60 fps, and hundreds of megabytes
+      per minute. That is a slow upload followed by a much slower render.
+
+      Build 1080x1920 proxies first. The composition renders at 1080x1920 regardless, so the
+      downscale costs nothing that would have survived anyway:
+
+        ffmpeg -y -i source.MP4 -map 0:v:0 -map 0:a:0 \
+          -vf scale=1080:1920 -r 30 \
+          -c:v libx264 -preset fast -crf 20 -pix_fmt yuv420p \
+          -c:a aac -b:a 192k public/clip-01.mp4
+
+      Measured on this footage: 1.4 GB of 3K HEVC became 143 MB.
+    </trap>
+
+    <trap name="vaapi-hardware-transcode">
+      On an Intel iGPU (Tiger Lake), VAAPI transcoded all 9 clips — 135 seconds of 3K HEVC —
+      in about a minute. The same job on libx264 at `-preset medium -crf 18` had not finished
+      the first 17-second clip after eight minutes and was abandoned, so the exact ratio is
+      unmeasured; the order of magnitude is not. Try hardware first.
+
+        ffmpeg -y -hwaccel vaapi -hwaccel_device /dev/dri/renderD128 \
+          -hwaccel_output_format vaapi -i source.MP4 -map 0:v:0 -map 0:a:0 \
+          -vf 'scale_vaapi=w=1080:h=1920:format=nv12,fps=30' \
+          -c:v h264_vaapi -qp 23 -c:a aac -b:a 192k public/clip-01.mp4
+
+      Check with `ls /dev/dri/` and `ffmpeg -encoders | grep vaapi`. Two details are not
+      optional:
+        - `format=nv12` — without it a 10-bit source dies with `No usable encoding profile
+          found`, because h264_vaapi cannot accept the 10-bit surface the decoder produced.
+        - `-map 0:v:0` — camera files often carry an extra MJPEG thumbnail video stream that
+          ffmpeg would otherwise try to encode as well.
+      An `hevc_nvenc` entry in the encoder list means only that ffmpeg was built with it;
+      confirm the GPU actually exists with `lspci | grep -i vga` before relying on it.
+    </trap>
+
+    <trap name="do-not-pipe-a-render-through-tail">
+      A render's progress counter is written with carriage returns. Piping it through
+      `tail`, `head`, or any non-line-buffered filter hides every line until the process
+      exits, so a 12-minute render looks identical to a hung one. Let render output through
+      unfiltered, or watch it with a line-buffered grep.
+    </trap>
+
+    <trap name="misheard-brand-names">
+      Check the transcript before rendering, not after. `public/captions.json` is written
+      before the render starts, so a wrong brand name can be fixed there and re-rendered
+      with `npm run render -- Captions out/x.mp4` — no second transcription, no second API
+      charge. Add the fix to corrections.json at the same time so it never comes back.
+      Matching is whole-word and case-insensitive, and single-word only.
+    </trap>
+
+    <trap name="captions-json-is-overwritten">
+      Every `npm run short` and `npm run transcribe` overwrites public/captions.json. The
+      committed one is the sample fixture's real transcript. Copy it aside if a transcript
+      still matters.
+    </trap>
+  </known_traps>
+
+  <constraints>
+    <do>Read CLAUDE.md before changing any code, and follow it where it is more specific than this prompt.</do>
+    <do>Run the gates in order and report the actual output, including failures.</do>
+    <do>Look at the image in gate 5. It is the only check that sees a layout bug.</do>
+    <do>Stop and ask when the API key is missing, when Node is too old, or when a gate fails for a reason you cannot explain.</do>
+
+    <do_not>Do not upgrade, add, or remove dependencies. Remotion's packages move as a set, through `npm run upgrade` only.</do_not>
+    <do_not>Do not commit .env, corrections.json, overlays.json, out/, or any media in public/. All are gitignored deliberately.</do_not>
+    <do_not>Do not rename the `Captions` composition id. It is the public handle every render command uses.</do_not>
+    <do_not>Do not import from src/ into scripts/ beyond the pure modules src/lib/silence.ts, framing.ts, ducking.ts, and overlays.ts. That boundary is deliberate and documented.</do_not>
+    <do_not>Do not introduce Date.now(), Math.random(), or wall-clock animation into anything under src/. Remotion renders each frame as a deterministic snapshot; the same frame number must always produce the same pixels.</do_not>
+    <do_not>Do not build an agent binary, a web layer, or a Lambda deployment as part of setup. CLAUDE.md explains why each is deferred.</do_not>
+  </constraints>
+
+</task>
