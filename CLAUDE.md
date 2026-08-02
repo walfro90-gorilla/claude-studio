@@ -51,6 +51,8 @@ out/                    # renders, gitignored
 
 Tracked vs ignored: `.claude/skills/` is committed (shared workflows) while `.claude/settings.local.json` is not (per-machine permissions). `public/` fixtures are committed; `out/`, `node_modules/`, and `.env` are not.
 
+Setting this up somewhere else is `INSTALL.md` — prerequisites (Node 22.18+, since the npm scripts pass no `--experimental-strip-types` and rely on stripping being on by default), and five verification gates ordered cheapest first. `MASTER-PROMPT.xml` is the same procedure addressed to Claude Code, to paste into a fresh session on the new machine. The repo is public at `github.com/walfro90-gorilla/claude-studio`, so treat anything committed as published — the gitignored files (`.env`, `corrections.json`, `overlays.json`, your own media in `public/`) are the line.
+
 Two boundaries carry the design:
 
 **`src` vs `scripts`** — `src` runs inside headless Chrome under Remotion's bundler; `scripts` runs in plain Node with filesystem and network access. Transcription, file IO, and API calls belong in `scripts` and hand results to `src` through `public/`. Do not import across that line, with one deliberate exception: `scripts` imports `src/lib/*`, which is pure and DOM-free, so the CLI and the composition cannot disagree about the cut or the framing. Nothing else in `src` may be imported from `scripts`.
@@ -94,6 +96,37 @@ It renders by spawning the Remotion CLI rather than calling `@remotion/renderer`
 
 Reach for the individual commands below when tuning; `short` is for when the settings are already right.
 
+## Heavy source footage
+
+`short` hands each input to two jobs that both scale with its size: it uploads the file to AssemblyAI **whole, video track included**, then renders from that same file. Screen recordings are fine. Camera footage usually is not — a phone or drone clip is commonly 3K or 4K, 10-bit HEVC, 48–60fps, and hundreds of megabytes per minute, which buys a slow upload and a much slower render for pixels the composition throws away.
+
+Build 1080x1920 proxies first. The composition renders at 1080x1920 regardless, so the downscale costs nothing that would have survived:
+
+```
+ffmpeg -y -i source.MP4 -map 0:v:0 -map 0:a:0 \
+  -vf scale=1080:1920 -r 30 \
+  -c:v libx264 -preset fast -crf 20 -pix_fmt yuv420p \
+  -c:a aac -b:a 192k public/clip-01.mp4
+```
+
+On an Intel iGPU, VAAPI does it in a fraction of the time — 135s of 3K HEVC in about a minute, where the libx264 line above at `-preset medium` had not finished a single 17s clip in eight:
+
+```
+ffmpeg -y -hwaccel vaapi -hwaccel_device /dev/dri/renderD128 -hwaccel_output_format vaapi \
+  -i source.MP4 -map 0:v:0 -map 0:a:0 \
+  -vf 'scale_vaapi=w=1080:h=1920:format=nv12,fps=30' \
+  -c:v h264_vaapi -qp 23 -c:a aac -b:a 192k public/clip-01.mp4
+```
+
+Check with `ls /dev/dri/` and `ffmpeg -encoders | grep vaapi`. Two arguments are load-bearing and both fail loudly only in specific cases:
+
+- `format=nv12` — a 10-bit source without it dies with `No usable encoding profile found`, because `h264_vaapi` cannot take the 10-bit surface the decoder handed it. 8-bit sources work either way, so this bites only on modern camera footage.
+- `-map 0:v:0` — camera files often carry a second, MJPEG *thumbnail* video stream. Without the map ffmpeg tries to transcode it too.
+
+An `hevc_nvenc` entry in `ffmpeg -encoders` means only that ffmpeg was built with it; confirm the GPU exists with `lspci | grep -i vga` first.
+
+Measured on nine DJI clips: 1.4GB of 1728x3072 HEVC became 143MB, and 135s of source rendered to an 86s short in about 12 minutes.
+
 ## Captions (AssemblyAI → Remotion)
 
 AssemblyAI complements Remotion rather than overlapping it: it turns audio into word-level timestamps, Remotion turns those into animated captions. `scripts/transcribe.mts` is the bridge.
@@ -118,6 +151,8 @@ Verified end to end on Spanish: detection picked `es` at 99%, the transcript car
 The transcriber reliably mishears brand and product names — "cloud" for Claude, and worse in a second language. `corrections.json` at the repo root (gitignored; `corrections.example.json` is the template) is a `{"misheard": "correct"}` map applied after every transcription by both `short` and `transcribe`, so a fix survives re-running. `applyCorrections` in `scripts/lib/captions.mts` matches whole words case-insensitively, keeps trailing punctuation, and preserves the ALL-CAPS shape the captions render in. Reading the file is `scripts/lib/corrections.mts`, kept apart so `captions.mts` stays fs-free.
 
 Single-word only, on purpose: a one-to-many fix (`"mister all"` → Mistral) spans two timestamped words and is deferred until it bites, since it needs a matcher over the token stream rather than a bigger map.
+
+**Read the transcript before the render, not after.** `public/captions.json` is written before `short` shells out to `remotion render`, so a wrong brand name caught at that moment costs nothing: fix the JSON, add the pair to `corrections.json` so it never returns, and re-render with `npm run render -- Captions out/x.mp4`. The composition takes its sources from the transcript, so that command needs no props and no second transcription — and no second API charge. Catching it after a twelve-minute render costs the render.
 
 ### The mapping
 
