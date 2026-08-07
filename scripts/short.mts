@@ -3,6 +3,7 @@
 //   node scripts/short.mts --check      # self-check, no API call, no render
 import { spawnSync } from "node:child_process";
 import { copyFileSync, existsSync, writeFileSync } from "node:fs";
+import { tmpdir } from "node:os";
 import { basename, extname, resolve } from "node:path";
 import type { Caption } from "@remotion/captions";
 import { transcribeToCaptions } from "./lib/captions.mts";
@@ -625,12 +626,18 @@ const main = async () => {
 
   // Transcribed one at a time rather than in parallel: AssemblyAI rate-limits
   // per account, and a short is a handful of clips, not hundreds.
-  for (const name of names) {
+  for (let i = 0; i < names.length; i++) {
+    const name = names[i];
     console.log(`transcribing ${name}...`);
+    // Upload the ORIGINAL input, never the public/ copy. On Windows the
+    // freshly-copied file can upload as garbage — 0 words, junk language
+    // detection (`en 13% sure`) — most likely antivirus touching a brand-new
+    // file mid-upload. The original reads cleanly; the copy exists only so the
+    // composition can render from public/. Same transcript on Linux either way.
     // ponytail: the file is uploaded whole, video track included. Strip the
     // audio out with ffmpeg first if the uploads get painful.
     const result = await transcribeToCaptions({
-      audio: resolve(PUBLIC_DIR, name),
+      audio: resolve(inputs[i]),
       apiKey,
       languageCode,
     });
@@ -653,15 +660,20 @@ const main = async () => {
   writeFileSync(CAPTIONS_OUT, JSON.stringify({ clips }, null, 2));
   console.log(`${clips.length} clip(s) -> public/captions.json`);
 
-  const props = JSON.stringify(renderProps);
+  // Remotion's --props accepts a file path as well as inline JSON. Writing the
+  // props to a file lets the render launch through a shell without the JSON
+  // braces and quotes being mangled — which is what makes this work on Windows,
+  // where npx is a .cmd and modern Node refuses to spawn it without a shell.
+  const propsFile = resolve(tmpdir(), "claude-studio-render-props.json");
+  writeFileSync(propsFile, JSON.stringify(renderProps));
   console.log(`rendering ${out}${names.some(isVideo) ? " (video behind captions — this takes minutes)" : ""}`);
   const render = spawnSync(
-    "npx",
-    ["remotion", "render", "Captions", out, `--props=${props}`],
-    { stdio: "inherit" },
+    `npx remotion render Captions "${out}" "--props=${propsFile}"`,
+    { stdio: "inherit", shell: true },
   );
   if (render.status !== 0) {
-    throw new Error(`render failed with code ${render.status}`);
+    const detail = render.error ? `: ${render.error.message}` : "";
+    throw new Error(`render failed with code ${render.status}${detail}`);
   }
 };
 
