@@ -57,6 +57,12 @@ export type CaptionedVideoProps = {
   color: string;
   /** contain (fit the whole frame with bars) instead of cover (crop to 9:16). */
   fit: boolean;
+  /**
+   * Keep the source's own 16:9 landscape canvas instead of the vertical 9:16
+   * short. Sized by calculateMetadata; also thins the caption block's edge
+   * margin, since the vertical short's platform-UI clearance does not apply.
+   */
+  landscape: boolean;
   /** Background music filename in public/, ducked under speech. null for none. */
   musicSrc: string | null;
   /** Hook-card text held before the video; null for none. */
@@ -88,6 +94,7 @@ const CaptionedContent: React.FC<ContentProps> = ({
   caption,
   color,
   fit,
+  landscape,
   musicSrc,
   overlays,
   durationInFrames,
@@ -191,7 +198,7 @@ const CaptionedContent: React.FC<ContentProps> = ({
       {page === undefined ? null : (
         <AbsoluteFill
           className="flex-row flex-wrap items-center justify-center gap-x-6 px-20 text-center"
-          style={captionLayoutFor(caption)}
+          style={captionLayoutFor(caption, landscape)}
         >
           {page.tokens.map((token, i) => (
             <span

@@ -38,6 +38,12 @@ const calculateMetadata: CalculateMetadataFunction<
   // it and the two can never disagree about where the content starts.
   const hookFrames = props.hook ? Math.round(HOOK_SECONDS * FPS) : 0;
 
+  // The canvas itself: 9:16 for a short, or the source's own 16:9 when
+  // --landscape asks to keep the original format untouched.
+  const { width, height } = props.landscape
+    ? { width: 1920, height: 1080 }
+    : { width: 1080, height: 1920 };
+
   return {
     props: {
       ...props,
@@ -45,6 +51,8 @@ const calculateMetadata: CalculateMetadataFunction<
       segments: trimmed.segments,
       hookFrames,
     },
+    width,
+    height,
     durationInFrames: Math.max(1, trimmed.durationInFrames + hookFrames),
   };
 };
@@ -68,6 +76,7 @@ export const Captions = () => {
         caption: "lower" as const,
         color: "#fde047",
         fit: false,
+        landscape: false,
         musicSrc: null,
         hook: null,
         hookFrames: 0,

@@ -21,16 +21,22 @@ export const isCaptionPosition = (value: string): value is CaptionPosition =>
  * moves them vertically (that one stays centred for horizontal centring).
  * Padding is a fraction of frame height, keeping the block clear of the
  * platform UI. `lower` is the short-form default: the app's buttons and
- * description sit in the bottom ~8%, so the block ends above that.
+ * description sit in the bottom ~8%, so the block ends above that. That
+ * platform-chrome margin only applies to the vertical 9:16 short; a
+ * `--landscape` render has no such overlay, so it gets a much thinner edge
+ * margin and the block reads as flush against the bottom of the screen.
  */
 export const captionLayoutFor = (
   position: CaptionPosition,
-): { alignContent: string; paddingTop: string; paddingBottom: string } =>
-  ({
-    lower: { alignContent: "flex-end", paddingTop: "0", paddingBottom: "18%" },
+  landscape = false,
+): { alignContent: string; paddingTop: string; paddingBottom: string } => {
+  const edge = landscape ? "4%" : "18%";
+  return {
+    lower: { alignContent: "flex-end", paddingTop: "0", paddingBottom: edge },
     center: { alignContent: "center", paddingTop: "0", paddingBottom: "0" },
-    upper: { alignContent: "flex-start", paddingTop: "18%", paddingBottom: "0" },
-  })[position];
+    upper: { alignContent: "flex-start", paddingTop: edge, paddingBottom: "0" },
+  }[position];
+};
 
 /**
  * `objectFit: cover` keeps the centre by default; this moves the surviving

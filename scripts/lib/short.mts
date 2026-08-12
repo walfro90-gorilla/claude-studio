@@ -43,6 +43,8 @@ export type RenderProps = {
   caption: CaptionPosition;
   color: string;
   fit: boolean;
+  /** Keep the source's own 16:9 landscape canvas instead of the vertical 9:16 short. */
+  landscape: boolean;
   /** Music filename inside public/. Filled by main after copying the file in. */
   musicSrc: string | null;
   /** Hook-card text shown before the video; null for none. */
@@ -84,6 +86,7 @@ export const parseArgs = (argv: string[]): ParsedArgs => {
     caption: "lower",
     color: DEFAULT_COLOR,
     fit: false,
+    landscape: false,
     musicSrc: null,
     hook: null,
     hookFrames: 0,
@@ -101,6 +104,10 @@ export const parseArgs = (argv: string[]): ParsedArgs => {
     }
     if (arg === "--fit") {
       props.fit = true;
+      continue;
+    }
+    if (arg === "--landscape") {
+      props.landscape = true;
       continue;
     }
     const match =

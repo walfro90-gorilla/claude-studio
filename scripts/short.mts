@@ -270,6 +270,13 @@ const checkClip = () => {
   if (!framed.props.fit) throw new Error("--fit must reach the props");
   if (parseArgs(["a.mp4"]).props.fit) throw new Error("fit must default to off (cover)");
 
+  if (!parseArgs(["a.mp4", "--landscape"]).props.landscape) {
+    throw new Error("--landscape must reach the props");
+  }
+  if (parseArgs(["a.mp4"]).props.landscape) {
+    throw new Error("landscape must default to off (vertical short)");
+  }
+
   // Music is captured as a raw path (main copies it in); no music means none.
   if (parseArgs(["a.mp4", "--music=song.mp3"]).music !== "song.mp3") {
     throw new Error("--music must be captured as a path");
